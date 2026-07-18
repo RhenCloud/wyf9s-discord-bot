@@ -140,10 +140,10 @@ All user-facing text must be localized. Never hardcode display strings.
 
 ## Documentation
 
-- After modifying a module or adding new configuration fields, update `config.example.yaml` and sync `README.md` if needed.
+- After modifying a module or adding new configuration fields, update `config.example.yaml` and sync the docs if needed.
 - When adding/changing user-facing text, update **both** `lang/zh.yaml` and `lang/en.yaml`.
 - `config.example.yaml` — example config with inline docs (the source of truth for config fields)
-- `README.md` — user-facing feature overview
+- `README.md` / `README.en.md` — concise entry points only: keep the introduction and module overview inline, and make every other section point to the matching Chinese / English docs URL instead of duplicating documentation.
 - `docs/` — VitePress site (guides + per-module pages); keep command tables and the i18n guide in sync
 - `AGENTS.md` — developer/agent instructions only (keep non-overlapping with README)
 
