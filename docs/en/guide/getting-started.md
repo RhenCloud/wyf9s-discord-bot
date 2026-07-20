@@ -35,8 +35,8 @@ sh update.sh
 
 | Argument | Environment variable | Description |
 | --- | --- | --- |
-| `--config`, `-c <PATH>` | `W9DCBOT_CONFIG` | Specify the config file path (default: `config.yaml` in the main program directory) |
-| `--token-file <PATH>` | `W9DCBOT_TOKEN_FILE` | Specify the token file path (default: `tk.yaml` in the main program directory, a YAML containing `token: xxx`) |
+| `--config`, `-c <PATH>` | `W9DCBOT_CONFIG` | Specify the config file path (default: look up the data directory first, then fall back to `config.yaml` in the program directory) |
+| `--token-file <PATH>` | `W9DCBOT_TOKEN_FILE` | Specify the token file path (default: look up the data directory first, then fall back to `tk.yaml` in the program directory, a YAML containing `token: xxx`) |
 | `--token <TOKEN>` | `W9DCBOT_TOKEN` | Specify the bot token directly |
 | `--data-dir <PATH>` | `W9DCBOT_DATA_DIR` | Runtime data file directory (default: `./data/`), see [Data Directory](#data-directory) |
 
@@ -77,6 +77,101 @@ Runtime-mutable data files (`perm.yaml`, `lang_settings.yaml`, `schedules.yaml`)
 ::: tip Multi-instance Deployment
 If you run multiple bot instances from the same code directory, specify a separate `--data-dir` (or `W9DCBOT_DATA_DIR`) for each instance; otherwise they will share data files such as `perm.yaml` and interfere with each other.
 :::
+
+### (Optional) Systemd — Background Running, Process Guardian, Auto Restart, and Boot Startup
+
+If you want the bot to run in the background with process guarding, automatic restart on crash, and auto-start on boot, it is recommended to use `systemd` to manage it.
+
+1. **Create the service file**:
+
+```bash
+sudo nano /etc/systemd/system/wyf9s-bot.service
+```
+
+2. **Paste the following (modify according to your environment)**:
+
+```
+[Unit]
+Description=wyf9s Discord Bot Service
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/root/.local/bin/uv run /root/wyf9s-discord-bot/main.py
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target  
+```
+
+Then press `ctrl + x`, enter `y` and press `enter`.
+
+3. **Run sequentially**:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl start wyf9s-bot
+sudo systemctl enable wyf9s-bot
+```
+
+::: tip ExecReload
+Running `systemctl reload wyf9s-bot` (or `systemctl reload-or-restart`) sends a `SIGHUP` signal to the bot, triggering a hot reload of the config file and all modules without interrupting the service. A failed reload does not affect the currently running process.
+:::
+
+<details>
+<summary>Systemd Common Commands</summary>
+<br>
+
+|**Action**|**Command**|
+|:---|:---:|
+|Check status|`sudo systemctl status wyf9s-bot`|
+|Start service|`sudo systemctl start wyf9s-bot`|
+|Stop service|`sudo systemctl stop wyf9s-bot`|
+|Restart service|`sudo systemctl restart wyf9s-bot`|
+|Reload config|`sudo systemctl reload wyf9s-bot`|
+|View logs|`sudo journalctl -u wyf9s-bot -f`|
+|View recent 50 lines of logs|`sudo journalctl -u wyf9s-bot -n 50 --no-pager`|
+|Disable auto-start|`sudo systemctl disable wyf9s-bot`|
+
+</details>
+
+#### If you need to run multiple bot instances:
+
+1. **First create the second service file**:
+
+```bash
+sudo nano /etc/systemd/system/wyf9s-bot-2.service
+```
+
+2. **Paste the following**:
+
+* Note: change `YOUR_TOKEN` to your Discord Bot Token.
+
+```
+[Unit]
+Description=wyf9s Discord Bot Service 2
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/root/.local/bin/uv run /root/wyf9s-discord-bot/main.py --token "YOUR_TOKEN"
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+```
+
+3. **Run sequentially**:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl start wyf9s-bot-2
+sudo systemctl enable wyf9s-bot-2
+```
 
 ## Bot Permissions and Intents
 

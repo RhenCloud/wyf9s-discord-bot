@@ -1,6 +1,8 @@
 # region import
 
+import asyncio
 import logging
+import signal
 from sys import stderr
 
 # Initialize loguru BEFORE importing any modules that use logging
@@ -122,6 +124,41 @@ def parse_args():
     # 忽略未知参数, 避免与其他工具 (如 debugger) 传入的参数冲突
     args, _ = parser.parse_known_args()
     return args
+
+
+async def _reload_sighup():
+    """Reload config and all cogs upon SIGHUP."""
+    l.info("SIGHUP received, reloading config and cogs...")
+    try:
+        new_config = Config(
+            config_path=_args.config,
+            token_file=_args.token_file,
+            token=_args.token,
+        ).config
+        client.config = new_config  # ty:ignore[unresolved-attribute]
+        audit = getattr(client, "audit", None)
+        if audit:
+            audit.c = new_config
+
+        succeeded = 0
+        failures: list[str] = []
+        for ext_name in list(client.extensions):
+            try:
+                await client.reload_extension(ext_name)
+                succeeded += 1
+            except Exception as e:
+                failures.append(str(e))
+                l.error(f"Failed to reload {ext_name}: {e}")
+
+        perm_store = getattr(client, "perm_store", None)
+        if perm_store:
+            perm_store._load()
+
+        l.info(
+            f"Reloaded config + {succeeded} cogs from SIGHUP ({len(failures)} failed)"
+        )
+    except Exception as e:
+        l.opt(exception=e).error("SIGHUP config reload failed")
 
 
 _args = parse_args()
@@ -300,14 +337,20 @@ async def on_ready():
 
 async def main():
     async with client:
+        # Register SIGHUP handler for config reload (Unix only)
+        _sighup = getattr(signal, "SIGHUP", None)
+        if _sighup is not None:
+            asyncio.get_running_loop().add_signal_handler(
+                _sighup, lambda: asyncio.create_task(_reload_sighup())
+            )
+            l.info("Registered SIGHUP handler for config reload")
+
         await client.tree.set_translator(I18nTranslator())
         await load_cogs()
         await client.start(c.token)
 
 
 if __name__ == "__main__":
-    import asyncio
-
     try:
         asyncio.run(main())
     except (KeyboardInterrupt, asyncio.CancelledError):

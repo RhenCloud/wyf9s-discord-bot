@@ -35,8 +35,8 @@ sh update.sh
 
 | 参数 | 环境变量 | 说明 |
 | --- | --- | --- |
-| `--config`, `-c <PATH>` | `W9DCBOT_CONFIG` | 指定配置文件路径（默认：主程序目录下的 `config.yaml`） |
-| `--token-file <PATH>` | `W9DCBOT_TOKEN_FILE` | 指定 token 文件路径（默认：主程序目录下的 `tk.yaml`，一个含 `token: xxx` 的 YAML） |
+| `--config`, `-c <PATH>` | `W9DCBOT_CONFIG` | 指定配置文件路径（默认：优先查找数据目录，未找到再回退到主程序目录下的 `config.yaml`） |
+| `--token-file <PATH>` | `W9DCBOT_TOKEN_FILE` | 指定 token 文件路径（默认：优先查找数据目录，未找到再回退到主程序目录下的 `tk.yaml`，一个含 `token: xxx` 的 YAML） |
 | `--token <TOKEN>` | `W9DCBOT_TOKEN` | 直接指定 Bot Token |
 | `--data-dir <PATH>` | `W9DCBOT_DATA_DIR` | 运行时数据文件目录（默认：`./data/`），见[数据目录](#数据目录) |
 
@@ -86,12 +86,17 @@ After=network.target
 [Service]
 Type=simple
 ExecStart=/root/.local/bin/uv run /root/wyf9s-discord-bot/main.py
+ExecReload=/bin/kill -HUP $MAINPID
 Restart=always
 RestartSec=10
 
 [Install]
 WantedBy=multi-user.target  
 ```
+
+::: tip ExecReload
+通过 `systemctl reload wyf9s-bot`（或 `systemctl reload-or-restart`）可向 Bot 发送 `SIGHUP` 信号，触发配置文件与所有模块的热重载，无需中断服务。重载失败不影响当前运行的进程。
+:::
 
 并 `ctrl + x` 输入 `y` 并使用 `enter` 键。
 
@@ -113,6 +118,7 @@ sudo systemctl enable wyf9s-bot
 |启动服务|`sudo systemctl start wyf9s-bot`|
 |停止服务|`sudo systemctl stop wyf9s-bot`|
 |重启服务|`sudo systemctl restart wyf9s-bot`|
+|重载配置|`sudo systemctl reload wyf9s-bot`|
 |查看日志|`sudo journalctl -u wyf9s-bot -f`|
 |查看最近 50 行日志|`sudo journalctl -u wyf9s-bot -n 50 --no-pager`|
 |禁用开机自启|`sudo systemctl disable wyf9s-bot`|
@@ -139,6 +145,7 @@ After=network.target
 [Service]
 Type=simple
 ExecStart=/root/.local/bin/uv run /root/wyf9s-discord-bot/main.py --token "YOUR_TOKEN"
+ExecReload=/bin/kill -HUP $MAINPID
 Restart=always
 RestartSec=10
 

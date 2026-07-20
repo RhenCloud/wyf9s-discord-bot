@@ -454,17 +454,17 @@ class Config:
         """
         初始化配置系统
 
-        :param config_path: 配置文件路径 (默认: 主程序目录下的 config.yaml)
-        :param token_file: token 文件路径 (默认: 主程序目录下的 tk.yaml)
+        :param config_path: 配置文件路径 (默认: 先查找数据目录, 未找到再回退到主程序目录下的 config.yaml)
+        :param token_file: token 文件路径 (默认: 先查找数据目录, 未找到再回退到主程序目录下的 tk.yaml)
         :param token: 直接指定 token, 优先级最高 (覆盖配置文件和 token 文件)
         """
         perf = u.perf_counter()
 
-        # resolve config path: 自定义路径按当前工作目录解析, 默认路径按主程序目录解析
+        # resolve config path: 自定义路径按当前工作目录解析, 默认路径优先查找数据目录再回退到主程序目录
         if config_path:
             resolved_config = str(Path(config_path).expanduser())
         else:
-            resolved_config = u.get_path("config.yaml")
+            resolved_config = u.get_data_path("config.yaml", for_read=True)
 
         # prepare yaml
         try:
@@ -477,12 +477,12 @@ class Config:
             l.error(f"Error when loading {resolved_config}: {e}")
 
         # load token from token file if it exists (for config splitting)
-        # 自定义 token 文件路径按当前工作目录解析, 默认 (tk.yaml) 按主程序目录解析
+        # 自定义 token 文件路径按当前工作目录解析, 默认优先查找数据目录再回退到主程序目录
         if token_file:
             tk_path = str(Path(token_file).expanduser())
             tk_required = True
         else:
-            tk_path = u.get_path("tk.yaml", create_dirs=False)
+            tk_path = u.get_data_path("tk.yaml", for_read=True)
             tk_required = False
         if Path(tk_path).exists():
             try:
