@@ -1,5 +1,9 @@
 # English (en) language strings
 
+bot:
+  # Bot global presence. Discord bot presence is global, always shown in English.
+  serving_status: "Serving {servers} Servers with {members} Members"
+
 common:
   no_permission: ":x: **You don't have permission to use this command** :x:"
   rate_limited: ":hourglass_flowing_sand: **Rate limited, retry in `{retry}s`**"
@@ -221,7 +225,6 @@ voice:
   not_in_voice: "Not in any voice channel"
   not_valid_voice: "Not in a valid voice channel"
   left: "Left **{channel}**"
-  idle_status: "Idle..."
 
 perm:
   cmd_desc: "[ADMIN] Manage dynamic permissions"

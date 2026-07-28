@@ -1,5 +1,9 @@
 # Chinese (zh) language strings
 
+bot:
+  # 机器人全局状态 (presence). 因 Discord 机器人状态为全局, 统一以英文展示.
+  serving_status: "Serving {servers} Servers with {members} Members"
+
 common:
   no_permission: ":x: **你没有权限使用此指令** :x:"
   rate_limited: ":hourglass_flowing_sand: **触发限速, 请在 `{retry}s` 后重试**"
@@ -221,7 +225,6 @@ voice:
   not_in_voice: "未在任何语音频道中"
   not_valid_voice: "不在有效的语音频道中"
   left: "已离开 **{channel}**"
-  idle_status: "空闲中..."
 
 perm:
   cmd_desc: "[ADMIN] 管理动态权限"

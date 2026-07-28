@@ -124,11 +124,6 @@ class VoiceCog(commands.Cog):
                     source, self._tr(source, "voice.joined", channel=channel.name)
                 )
 
-            await self.bot.change_presence(
-                activity=discord.Activity(
-                    type=discord.ActivityType.listening, name=channel.name
-                )
-            )
             l.info(f"Bot joined voice: {channel.name} ({channel.id})")
             if self.audit:
                 await self.audit.log(
@@ -191,12 +186,6 @@ class VoiceCog(commands.Cog):
         await guild.voice_client.disconnect(force=False)
         await u.send_msg(source, self._tr(source, "voice.left", channel=channel_name))
 
-        await self.bot.change_presence(
-            activity=discord.Activity(
-                type=discord.ActivityType.watching,
-                name=self._tr(source, "voice.idle_status"),
-            )
-        )
         l.info(f"Bot left voice: {channel_name}")
         if self.audit:
             await self.audit.log(

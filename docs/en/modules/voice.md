@@ -32,7 +32,6 @@ Behavior details:
 - On joining, the bot automatically **self-deaf + self-mute** (self-deafen / self-mute).
 - If the bot is already in another channel, it disconnects first and then joins the target channel (showing "Moved to").
 - If it is already in the target channel, it shows "Already inside".
-- After joining, the bot's status is set to "Listening to `<channel name>`".
 - If the channel requires **DAVE encryption** but the connection fails (error code 4017), a corresponding error is shown.
 - Stage channels (StageChannel) are not supported for automatic joining as "the channel you are currently in".
 
@@ -46,7 +45,6 @@ Have the bot leave the voice channel it is currently in.
 | Audit | ✅ Recorded (`leavevc`) |
 
 - If the bot is not in any voice channel, a message is shown.
-- After leaving, the bot's status is set to "Watching Waiting for commands...".
 
 ## Configuration
 

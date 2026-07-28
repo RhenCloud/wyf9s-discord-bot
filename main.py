@@ -311,6 +311,39 @@ async def on_tree_error(
 # region login
 
 
+async def update_presence():
+    """
+    刷新机器人的全局状态为 "Serving X Servers with X Members".
+
+    Discord 机器人的 presence 是全局的 (无法按服务器单独设置), 因此这里统计
+    所有服务器数量与成员总数, 展示为一条固定格式的状态.
+    """
+    from i18n import t as _t
+
+    guild_count = len(client.guilds)
+    member_count = sum((g.member_count or 0) for g in client.guilds)
+    await client.change_presence(
+        activity=discord.CustomActivity(
+            name=_t(
+                "bot.serving_status",
+                "en",
+                servers=guild_count,
+                members=member_count,
+            )
+        )
+    )
+
+
+@client.event
+async def on_guild_join(guild: discord.Guild):
+    await update_presence()
+
+
+@client.event
+async def on_guild_remove(guild: discord.Guild):
+    await update_presence()
+
+
 @client.event
 async def on_ready():
     l.info(
@@ -319,6 +352,8 @@ async def on_ready():
 
     await client.tree.sync()
     l.info("Slash commands synced.")
+
+    await update_presence()
 
     # Initialize emoji data on startup
     if c.emoji.enabled:
