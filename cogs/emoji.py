@@ -139,7 +139,7 @@ class EmojiCog(commands.Cog):
                                 ),
                             )
                         )
-        except Exception as err:  # noqa: BLE001
+        except Exception as err:
             await interaction.followup.send(
                 self._tr(
                     interaction, "emoji.fetch_error", name=name, url=imgurl, error=err
@@ -204,7 +204,7 @@ class EmojiCog(commands.Cog):
                                 ),
                             )
                         )
-        except Exception as err:  # noqa: BLE001
+        except Exception as err:
             await ctx.send(
                 self._tr(ctx, "emoji.fetch_error", name=name, url=imgurl, error=err),
                 delete_after=10,

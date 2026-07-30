@@ -229,6 +229,9 @@ voice:
   not_in_voice: "未在任何语音频道中"
   not_valid_voice: "不在有效的语音频道中"
   left: "已离开 **{channel}**"
+  reconnected: ":white_check_mark: 已自动重新连接到 **{channel}**"
+  reconnect_failed: ":warning: 语音断线重连失败，请手动重新连接"
+  admin_disconnected: ":warning: 请使用 `/vc leave` 或 `{prefix}vc leave` 指令来让机器人离开语音频道"
 
 perm:
   cmd_desc: "[ADMIN] 管理动态权限"

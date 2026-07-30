@@ -20,4 +20,4 @@ dependencies = [
 ]
 
 [tool.ruff]
-ignore = ["E402"]
+lint.ignore = ["E402", "BLE001"]

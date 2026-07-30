@@ -1,3 +1,4 @@
+import asyncio
 import json
 
 import discord
@@ -34,6 +35,9 @@ class VoiceCog(commands.Cog):
         self.c = bot.config  # ty:ignore[unresolved-attribute]
         self.audit: AuditLogger | None = getattr(bot, "audit", None)
         self.lang_store = getattr(bot, "lang_store", None)
+        self._reconnecting: set[int] = set()  # guild IDs currently reconnecting
+        self._last_vc: dict[int, int] = {}  # guild_id -> channel_id before disconnect
+        self._intentional_disconnect: set[int] = set()  # guild IDs from /vc leave
 
     def _tr(self, source, key: str, **kwargs) -> str:
         return _t(key, lang_of(source, self.lang_store), **kwargs)
@@ -210,6 +214,9 @@ class VoiceCog(commands.Cog):
             return
 
         channel = guild.voice_client.channel
+        self._intentional_disconnect.add(guild.id)
+        self._reconnecting.discard(guild.id)
+        self._last_vc.pop(guild.id, None)
         await guild.voice_client.disconnect(force=False)
         await u.send_msg(source, self._tr(source, "voice.left", channel=channel.name))
 
@@ -232,6 +239,187 @@ class VoiceCog(commands.Cog):
                 channel=source.channel,
                 detail=f"Left voice `{channel.name}`",
             )
+
+    async def _attempt_reconnect(
+        self, guild: discord.Guild, channel_id: int, *, notify_admin: bool = False
+    ):
+        """Exponential-backoff reconnection loop for a single guild."""
+        if guild.id in self._reconnecting:
+            return
+        self._reconnecting.add(guild.id)
+
+        try:
+            max_delay = self.c.voicechannel.reconnect_max_delay
+            delay = 5
+            while guild.id in self._reconnecting:
+                try:
+                    channel = guild.get_channel(channel_id)
+                    if not channel:
+                        try:
+                            channel = await guild.fetch_channel(channel_id)
+                        except Exception:
+                            l.warning(
+                                f"[voice] Channel {channel_id} not found in guild {guild.id}, stopping reconnect"
+                            )
+                            break
+
+                    if not isinstance(channel, discord.VoiceChannel):
+                        l.warning(
+                            f"[voice] Channel {channel_id} in guild {guild.id} is not a voice channel, stopping reconnect"
+                        )
+                        break
+
+                    me = guild.me
+                    if me and not channel.permissions_for(me).connect:
+                        l.warning(
+                            f"[voice] No connect permission for {channel.name} in guild {guild.id}, retrying in {delay}s"
+                        )
+                        await asyncio.sleep(delay)
+                        delay = min(delay * 2, max_delay)
+                        continue
+
+                    if guild.voice_client:
+                        if (
+                            isinstance(guild.voice_client.channel, discord.VoiceChannel)
+                            and guild.voice_client.channel.id == channel_id
+                        ):
+                            l.info(
+                                f"[voice] Already reconnected to {channel.name} in guild {guild.id}"
+                            )
+                            break
+
+                    await channel.connect(self_deaf=True, self_mute=True)
+                    l.info(
+                        f"[voice] Reconnected to {channel.name} ({channel_id}) in guild {guild.id}"
+                    )
+                    self._reconnecting.discard(guild.id)
+
+                    try:
+                        await channel.send(
+                            self._t_for_guild(
+                                guild, "voice.reconnected", channel=channel.name
+                            )
+                        )
+                    except Exception:
+                        pass
+
+                    if notify_admin:
+                        try:
+                            prefix = self.c.command_prefix
+                            await channel.send(
+                                self._t_for_guild(
+                                    guild,
+                                    "voice.admin_disconnected",
+                                    prefix=prefix,
+                                )
+                            )
+                        except Exception:
+                            pass
+
+                    if self.audit:
+                        try:
+                            assert self.bot.user is not None
+                            await self.audit.log(
+                                action="voice-reconnect",
+                                user=self.bot.user,  # ty:ignore[invalid-argument-type]
+                                guild=guild,
+                                detail=f"Reconnected to voice `{channel.name}` (`{channel_id}`)",
+                            )
+                        except Exception:
+                            pass
+                    return
+
+                except discord.ClientException as e:
+                    l.warning(
+                        f"[voice] Reconnect attempt failed for guild {guild.id}: {e}, retrying in {delay}s"
+                    )
+                    await asyncio.sleep(delay)
+                    delay = min(delay * 2, max_delay)
+                except discord.ConnectionClosed as e:
+                    l.warning(
+                        f"[voice] Connection closed during reconnect for guild {guild.id}: {e}, retrying in {delay}s"
+                    )
+                    await asyncio.sleep(delay)
+                    delay = min(delay * 2, max_delay)
+                except asyncio.CancelledError:
+                    raise
+                except Exception as e:
+                    l.error(
+                        f"[voice] Unexpected error during reconnect for guild {guild.id}: {type(e).__name__}: {e}"
+                    )
+                    await asyncio.sleep(delay)
+                    delay = min(delay * 2, max_delay)
+
+            l.warning(f"[voice] Reconnect loop ended for guild {guild.id}")
+        finally:
+            self._reconnecting.discard(guild.id)
+            self._last_vc.pop(guild.id, None)
+
+    def _t_for_guild(self, guild: discord.Guild, key: str, **kwargs) -> str:
+        lang = "zh"
+        if self.lang_store:
+            lang = self.lang_store.resolve(0, guild.id)
+        return _t(key, lang, **kwargs)
+
+    @staticmethod
+    def _is_persisted(guild_id: int) -> bool:
+        try:
+            data_path = u.get_data_path("voice.yaml")
+            with open(data_path, "r", encoding="utf-8") as f:
+                persisted = json.load(f)
+            return str(guild_id) in persisted
+        except Exception:
+            return False
+
+    @commands.Cog.listener()
+    async def on_voice_state_update(
+        self,
+        member: discord.Member,
+        before: discord.VoiceState,
+        after: discord.VoiceState,
+    ):
+        if not self.bot.user or member.id != self.bot.user.id:
+            return
+
+        guild = member.guild
+        vc = self.c.voicechannel
+
+        if before.channel and not after.channel:
+            if guild.id in self._intentional_disconnect:
+                self._intentional_disconnect.discard(guild.id)
+                return
+
+            l.info(
+                f"[voice] Bot disconnected from voice in guild {guild.id} (channel: {before.channel.name})"
+            )
+
+            if not vc.reconnect:
+                return
+
+            if guild.id in self._reconnecting:
+                return
+
+            self._last_vc[guild.id] = before.channel.id
+
+            if vc.enabled:
+                is_persisted = self._is_persisted(guild.id)
+                # persist=True → always reconnect, notify admin to use /vc leave
+                # persist=False → reconnect only for non-admin disconnects
+                asyncio.create_task(
+                    self._attempt_reconnect(
+                        guild, before.channel.id, notify_admin=is_persisted
+                    )
+                )
+            else:
+                l.info("[voice] Voice module disabled, skipping reconnect")
+
+        elif after.channel and not before.channel:
+            self._last_vc[guild.id] = after.channel.id
+
+    async def cog_unload(self):
+        self._reconnecting.clear()
+        self._last_vc.clear()
+        self._intentional_disconnect.clear()
 
 
 async def setup(bot: commands.Bot):

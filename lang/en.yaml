@@ -229,6 +229,9 @@ voice:
   not_in_voice: "Not in any voice channel"
   not_valid_voice: "Not in a valid voice channel"
   left: "Left **{channel}**"
+  reconnected: ":white_check_mark: Automatically reconnected to **{channel}**"
+  reconnect_failed: ":warning: Voice reconnect failed, please reconnect manually"
+  admin_disconnected: ":warning: Please use `/vc leave` or `{prefix}vc leave` to make the bot leave the voice channel"
 
 perm:
   cmd_desc: "[ADMIN] Manage dynamic permissions"

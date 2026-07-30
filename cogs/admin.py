@@ -216,7 +216,7 @@ class AdminCog(commands.Cog):
             try:
                 await self.bot.reload_extension(ext_name)
                 succeeded += 1
-            except Exception as e:  # noqa: BLE001
+            except Exception as e:
                 failures.append(f"`{ext_name}`: {e}")
                 l.error(f"Failed to reload {ext_name}: {e}")
         perm_store = getattr(self.bot, "perm_store", None)

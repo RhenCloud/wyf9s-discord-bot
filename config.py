@@ -200,6 +200,16 @@ class _VoiceChannelConfigModel(BaseModel):
     按服务器配置的 voice 允许列表, key 为 guild id
     """
 
+    reconnect: bool = True
+    """
+    断线后是否自动重连 (包括 Discord 内部重连失败后的主动重连)
+    - persist=True 时, 即使被管理员断开也会重连 (需使用 /vc leave 离开)
+    - persist=False 时, 仅在非管理员断连时重连
+    """
+
+    reconnect_max_delay: int = 300
+    """断线重连指数退避最大间隔 (秒)"""
+
 
 class _AuditGuildConfigModel(BaseModel):
     """Per-server audit log config"""
@@ -531,7 +541,7 @@ class Config:
                     l.info(f"[config] Loaded token from {tk_path}")
                 else:
                     l.warning(f"[config] No 'token' key found in {tk_path}")
-            except Exception as e:  # noqa: BLE001
+            except Exception as e:
                 l.warning(f"[config] Failed to load {tk_path}: {e}")
         elif tk_required:
             l.error(f"Token file {tk_path} not found!")

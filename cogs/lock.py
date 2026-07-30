@@ -58,7 +58,7 @@ class ScheduleStore:
                 with open(read_path, "r", encoding="utf-8") as f:
                     data = safe_load(f) or []
                 self.schedules = [ScheduledLock.model_validate(item) for item in data]
-            except Exception as e:  # noqa: BLE001
+            except Exception as e:
                 l.warning(f"[lock] Failed to load schedules: {e}")
                 self.schedules = []
 
@@ -375,7 +375,7 @@ class LockCog(commands.Cog):
                 ephemeral=True,
                 delete_after=10,
             )
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             await u.send_msg(
                 source,
                 self._tr(source, "lock.lock_failed", error=e),
@@ -427,7 +427,7 @@ class LockCog(commands.Cog):
                 ephemeral=True,
                 delete_after=10,
             )
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             await u.send_msg(
                 source,
                 self._tr(source, "lock.unlock_failed", error=e),
@@ -581,7 +581,7 @@ class LockCog(commands.Cog):
             if channel is None:
                 try:
                     channel = await self.bot.fetch_channel(schedule.channel_id)
-                except Exception:  # noqa: BLE001
+                except Exception:
                     l.warning(f"[lock] Cannot fetch {schedule.channel_id}, removing")
                     to_remove.append(idx)
                     continue
@@ -645,7 +645,7 @@ class LockCog(commands.Cog):
                         l.warning(f"[lock] No permission to lock {channel.id}")
                         if not schedule.cycle:
                             to_remove.append(idx)
-                    except Exception as e:  # noqa: BLE001
+                    except Exception as e:
                         l.error(f"[lock] Lock failed {channel.id}: {e}")
 
             if schedule.unlock_day or schedule.unlock_time:
@@ -680,7 +680,7 @@ class LockCog(commands.Cog):
                         l.warning(f"[lock] No permission to unlock {channel.id}")
                         if not schedule.cycle:
                             to_remove.append(idx)
-                    except Exception as e:  # noqa: BLE001
+                    except Exception as e:
                         l.error(f"[lock] Unlock failed {channel.id}: {e}")
 
             if not schedule.cycle:

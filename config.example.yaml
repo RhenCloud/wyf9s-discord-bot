@@ -106,6 +106,8 @@ voicechannel:
   prefix: true
   allowed_users: []           # voice 白名单 (全局): 留空则仅 mod 可用
   allowed_guilds: {}           # voice 白名单 (按服务器) { guild_id: [user...] }
+  reconnect: true             # 断线后是否自动重连 (persist=True 时即使被管理员断开也会重连)
+  reconnect_max_delay: 300    # 断线重连指数退避最大间隔 (秒)
 
 # =============================================================================
 # 反垃圾消息模块 (无指令, 基于事件)
