@@ -210,6 +210,7 @@ lock:
 
 voice:
   cmd_group_desc: "Voice channel control"
+  param_persist: "Persist this voice session (true for long‑running)"
   cmd_join_desc: "[MOD] Join a voice channel (yours or specified)"
   cmd_leave_desc: "[MOD] Leave current voice channel"
   param_join_channel: "Voice channel to join (default: your current)"

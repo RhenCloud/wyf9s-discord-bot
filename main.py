@@ -318,19 +318,17 @@ async def update_presence():
     Discord 机器人的 presence 是全局的 (无法按服务器单独设置), 因此这里统计
     所有服务器数量与成员总数, 展示为一条固定格式的状态.
     """
-    from i18n import t as _t
 
+    if not client.config.presence.enabled:  # ty:ignore[unresolved-attribute]
+        return
     guild_count = len(client.guilds)
     member_count = sum((g.member_count or 0) for g in client.guilds)
+    activity_str = client.config.presence.activity.format(  # ty:ignore[unresolved-attribute]
+        servers=guild_count, members=member_count
+    )
     await client.change_presence(
-        activity=discord.CustomActivity(
-            name=_t(
-                "bot.serving_status",
-                "en",
-                servers=guild_count,
-                members=member_count,
-            )
-        )
+        activity=discord.CustomActivity(name=activity_str),
+        status=getattr(discord.Status, client.config.presence.status),  # ty:ignore[unresolved-attribute]
     )
 
 
@@ -354,6 +352,33 @@ async def on_ready():
     l.info("Slash commands synced.")
 
     await update_presence()
+
+    # Restore persisted voice sessions if any
+    try:
+        import os
+        import json
+
+        persist_path = u.get_data_path("voice.yaml")
+        if os.path.exists(persist_path):
+            with open(persist_path, "r", encoding="utf-8") as f:
+                persisted = json.load(f)
+            for gid_str, ch_id in persisted.items():
+                guild = client.get_guild(int(gid_str))
+                if not guild:
+                    continue
+                if guild.voice_client:
+                    continue
+                channel = client.get_channel(ch_id) or await client.fetch_channel(ch_id)
+                if isinstance(channel, discord.VoiceChannel):
+                    try:
+                        await channel.connect(self_deaf=True, self_mute=True)
+                        l.info(f"[voice] Restored persisted voice for guild {guild.id}")
+                    except Exception as e:
+                        l.warning(
+                            f"[voice] Failed to restore voice for guild {guild.id}: {e}"
+                        )
+    except Exception as e:
+        l.warning(f"[voice] Failed to load persisted voice file: {e}")
 
     # Initialize emoji data on startup
     if c.emoji.enabled:

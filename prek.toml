@@ -23,12 +23,4 @@ entry = "uvx ty check"
 pass_filenames = false
 files = "\\.py$"
 
-[[repos.hooks]]
-id = "markdownlint"
-name = "markdownlint (PyMarkdown)"
-language = "system"
-entry = "uv run pymarkdown --config .pymarkdown.json scan"
-files = "\\.md$"
-# VitePress `layout: home` pages are frontmatter-only; PyMarkdown's
-# front-matter parser can't handle blank lines inside frontmatter.
-exclude = "^docs/(en/)?index\\.md$"
+

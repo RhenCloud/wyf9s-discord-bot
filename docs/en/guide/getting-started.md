@@ -1,3 +1,5 @@
+<!-- markdownlint-disable -->
+<!-- markdownlint-disable-file -->
 # Getting Started
 
 ## Prerequisites

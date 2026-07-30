@@ -210,6 +210,7 @@ lock:
 
 voice:
   cmd_group_desc: "语音频道控制"
+  param_persist: "持久化此语音会话（长时间挂机）"
   cmd_join_desc: "[MOD] 加入语音频道 (你的或指定的)"
   cmd_leave_desc: "[MOD] 离开当前语音频道"
   param_join_channel: "要加入的语音频道 (默认: 你当前所在)"

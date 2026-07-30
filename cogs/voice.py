@@ -6,6 +6,7 @@ from discord.ext import commands
 from modules.audit import AuditLogger
 from i18n import t as _t, lang_of, ls
 import utils as u
+import json
 
 
 def _voice_permission(
@@ -40,14 +41,17 @@ class VoiceCog(commands.Cog):
     vc_group = app_commands.Group(name="vc", description=ls("voice.cmd_group_desc"))
 
     @vc_group.command(name="join", description=ls("voice.cmd_join_desc"))
-    @app_commands.describe(channel=ls("voice.param_join_channel"))
+    @app_commands.describe(
+        channel=ls("voice.param_join_channel"), persist=ls("voice.param_persist")
+    )
     @u.requires(_voice_permission, perm_module="voice")
     async def vc_join(
         self,
         interaction: discord.Interaction,
         channel: discord.VoiceChannel | None = None,
+        persist: bool = False,
     ):
-        await self._handle_joinvc(interaction, channel)
+        await self._handle_joinvc(interaction, channel, persist)
 
     @vc_group.command(name="leave", description=ls("voice.cmd_leave_desc"))
     @u.requires(_voice_permission, perm_module="voice")
@@ -63,16 +67,21 @@ class VoiceCog(commands.Cog):
     @prefix_vc.command(name="join")
     @u.requires(_voice_permission, perm_module="voice")
     async def prefix_vc_join(
-        self, ctx: commands.Context, channel: discord.VoiceChannel | None = None
+        self,
+        ctx: commands.Context,
+        channel: discord.VoiceChannel | None = None,
+        persist: bool = False,
     ):
-        await self._handle_joinvc(ctx, channel)
+        await self._handle_joinvc(ctx, channel, persist)
 
     @prefix_vc.command(name="leave")
     @u.requires(_voice_permission, perm_module="voice")
     async def prefix_vc_leave(self, ctx: commands.Context):
         await self._handle_leavevc(ctx)
 
-    async def _handle_joinvc(self, source, channel: discord.VoiceChannel | None = None):
+    async def _handle_joinvc(
+        self, source, channel: discord.VoiceChannel | None = None, persist: bool = False
+    ):
         user = source.user if isinstance(source, discord.Interaction) else source.author
 
         if channel is None and isinstance(user, discord.Member):
@@ -125,6 +134,22 @@ class VoiceCog(commands.Cog):
                 )
 
             l.info(f"Bot joined voice: {channel.name} ({channel.id})")
+            if persist and guild:
+                try:
+                    data_path = u.get_data_path("voice.yaml")
+                    try:
+                        with open(data_path, "r", encoding="utf-8") as f:
+                            persisted = json.load(f)
+                    except Exception:
+                        persisted = {}
+                    persisted[str(guild.id)] = channel.id
+                    with open(data_path, "w", encoding="utf-8") as f:
+                        json.dump(persisted, f, ensure_ascii=False, indent=2)
+                    l.info(
+                        f"[voice] Persisted voice for guild {guild.id} -> channel {channel.id}"
+                    )
+                except Exception as e:
+                    l.warning(f"[voice] Failed to persist voice: {e}")
             if self.audit:
                 await self.audit.log(
                     action="joinvc",
@@ -187,6 +212,16 @@ class VoiceCog(commands.Cog):
         await u.send_msg(source, self._tr(source, "voice.left", channel=channel_name))
 
         l.info(f"Bot left voice: {channel_name}")
+        # Clean up persisted voice state if present
+        try:
+            data_path = u.get_data_path("voice.yaml")
+            with open(data_path, "r", encoding="utf-8") as f:
+                persisted = json.load(f)
+            persisted.pop(str(guild.id), None)
+            with open(data_path, "w", encoding="utf-8") as f:
+                json.dump(persisted, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            l.warning(f"[voice] Failed to clean persisted voice entry: {e}")
         if self.audit:
             await self.audit.log(
                 action="leavevc",

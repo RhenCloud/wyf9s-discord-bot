@@ -105,6 +105,10 @@ class AntispamActionView(discord.ui.View):
                 reason=_t("antispam.unban_reason", lang, actor=str(interaction.user)),
             )
             await self._finalize_button(interaction, "antispam.action_unban")
+            # Broadcast antispam action tag to all audit channels
+            audit = interaction.client.audit  # ty:ignore[unresolved-attribute]
+            if audit:
+                await audit._broadcast_antispam_tag(guild, self.target_id, "unban")
         except discord.NotFound:
             await interaction.response.send_message(
                 _t("antispam.user_not_found_ban", lang), ephemeral=True
@@ -144,6 +148,10 @@ class AntispamActionView(discord.ui.View):
                 reason=_t("antispam.unmute_reason", lang, actor=str(interaction.user)),
             )
             await self._finalize_button(interaction, "antispam.action_unmute")
+            # Broadcast antispam action tag to all audit channels
+            audit = interaction.client.audit  # ty:ignore[unresolved-attribute]
+            if audit:
+                await audit._broadcast_antispam_tag(guild, self.target_id, "unmute")
         except discord.NotFound:
             await interaction.response.send_message(
                 _t("antispam.member_not_found", lang), ephemeral=True
@@ -262,6 +270,7 @@ class AuditLogger:
         *,
         embed: discord.Embed | None = None,
         view: discord.ui.View | None = None,
+        content: str | None = None,
     ):
         try:
             target = self.client.get_channel(channel_id)
@@ -272,11 +281,13 @@ class AuditLogger:
                     f"[audit] Log channel {channel_id} is not a text channel, skipped"
                 )
                 return None
-            kwargs: dict[str, discord.Embed | discord.ui.View] = {}
+            kwargs: dict[str, discord.Embed | discord.ui.View | str] = {}
             if embed:
                 kwargs["embed"] = embed
             if view:
                 kwargs["view"] = view
+            if content:
+                kwargs["content"] = content
             return await target.send(**kwargs)  # ty:ignore[no-matching-overload]
         except discord.Forbidden:
             l.warning(f"[audit] No permission to send to log channel {channel_id}")
@@ -321,6 +332,23 @@ class AuditLogger:
 
         for channel_id in targets:
             await self._send_to_channel(channel_id, embed=embed)
+
+    async def _broadcast_antispam_tag(
+        self, guild: discord.Guild, user_id: int, action: str
+    ) -> None:
+        """Send a stateless tag message to all audit channels.
+        The format is ``-# *(antispam-action/<user_id>/<action>)*``.
+        If ``unban_link`` is enabled in the antispam rule, a message link can be
+        appended (handled by the caller).
+        """
+        if not self.c.audit.enabled:
+            return
+        targets = self._resolve_targets(guild)
+        if not targets:
+            return
+        content = f"-# *(antispam-action/{user_id}/{action})*"
+        for cid in targets:
+            await self._send_to_channel(cid, content=content)
 
     @staticmethod
     def _build_message_snapshot_embed(

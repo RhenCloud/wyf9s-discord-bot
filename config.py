@@ -341,7 +341,8 @@ class _SpamCatcherRuleConfigModel(BaseModel):
 
     public_log: bool = Field(default=True, alias="public-log")
     """是否在频道公开通知处理结果"""
-
+    unban_link: bool = Field(default=False, alias="unban-link")
+    """是否在 antispam 解封日志中添加链接（需要 log_channel 配置）"""
     stranger_roles: list[int | str] = Field(
         default_factory=list, alias="stranger-roles"
     )
@@ -406,6 +407,23 @@ class _AnnounceConfigModel(BaseModel):
     """
 
 
+class _PresenceConfigModel(BaseModel):
+    """
+    Bot presence configuration (global).
+    """
+
+    enabled: bool = True
+    """Enable custom presence"""
+
+    activity: str = "Serving {servers} Servers with {members} Members"
+    """Presence activity string, supports {servers} and {members} placeholders"""
+
+    status: t.Literal["online", "idle", "dnd", "invisible"] = "online"
+    """Discord status (online/dnd/idle/invisible)"""
+
+    # optionally could add more fields later
+
+
 class ConfigModel(BaseModel):
     """
     基础配置
@@ -432,6 +450,7 @@ class ConfigModel(BaseModel):
     rmtodo: _AutoRemoveTodoConfigModel = _AutoRemoveTodoConfigModel()
     rmmsg: _AutoRemoveMessageConfigModel = _AutoRemoveMessageConfigModel()
     voicechannel: _VoiceChannelConfigModel = _VoiceChannelConfigModel()
+    presence: _PresenceConfigModel = _PresenceConfigModel()
     admins: _PermissionListConfigModel = _PermissionListConfigModel()
     mods: _ScopedPermissionListConfigModel = _ScopedPermissionListConfigModel()
     perm: _PermConfigModel = _PermConfigModel()
