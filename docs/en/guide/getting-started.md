@@ -175,6 +175,18 @@ sudo systemctl start wyf9s-bot-2
 sudo systemctl enable wyf9s-bot-2
 ```
 
+# =============================================================================
+# Bot Presence (global)
+# =============================================================================
+# presence configuration allows setting a custom global Bot status.
+# In `activity` you may use {servers} and {members} placeholders which are replaced
+# at runtime with the current server and member counts.
+# `status` is one of: online, idle, dnd, invisible.
+presence:
+  enabled: true                # Enable custom presence
+  activity: "Serving {servers} Servers with {members} Members"
+  status: online               # online | idle | dnd | invisible
+
 ## Bot Permissions and Intents
 
 ### Gateway Intents

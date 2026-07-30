@@ -1,14 +1,14 @@
-from datetime import datetime, timedelta, timezone
 import typing as t
+from datetime import datetime, timedelta, timezone
 
-from loguru import logger as l
 import discord
 from discord.ext import commands
+from loguru import logger as l
 
 from config import _SpamCatcherRuleConfigModel
-from modules.audit import AuditLogger
-from modules.clear_message import CLEAR_MESSAGE_MARKER, ClearMessageService
 from i18n import t as _t
+from modules.audit import AuditLogger, _build_antispam_tag
+from modules.clear_message import CLEAR_MESSAGE_MARKER, ClearMessageService
 
 
 class AntiSpamCog(commands.Cog):
@@ -89,8 +89,6 @@ class AntiSpamCog(commands.Cog):
             user=t.cast(discord.User, target),
             within_minutes=within_minutes,
             scope="server",
-            # Also delete the spammer's own forum posts (threads) within the
-            # window, not just their messages inside other threads.
             delete_threads=True,
             write_audit=False,
             lang=self._guild_lang(guild),
@@ -105,24 +103,25 @@ class AntiSpamCog(commands.Cog):
         category: str,
         action_label: str,
         should_ping: bool,
+        base_action: str,
     ) -> str:
         lang = self._guild_lang(member.guild)
         mention = member.mention
         if should_ping:
-            return _t("antispam.public_notice_hacked", lang, mention=mention)
-        # kick/ban removes the member from the guild, so the mention will
-        # eventually render as "unknown user"; append the username after the
-        # ping to keep the notice identifiable over time.
-        if action_label in ("kick", "ban"):
-            mention = f"{mention} (`{member.name}`)"
-        category_label = _t(f"antispam.category_{category}", lang)
-        return _t(
-            "antispam.public_notice_triggered",
-            lang,
-            mention=mention,
-            category=category_label,
-            action=action_label,
-        )
+            notice = _t("antispam.public_notice_hacked", lang, mention=mention)
+        else:
+            if action_label in ("kick", "ban"):
+                mention = f"{mention} (`{member.name}`)"
+            category_label = _t(f"antispam.category_{category}", lang)
+            notice = _t(
+                "antispam.public_notice_triggered",
+                lang,
+                mention=mention,
+                category=category_label,
+                action=action_label,
+            )
+        tag = _build_antispam_tag(member.id, base_action)
+        return f"{notice}\n{tag}"
 
     @staticmethod
     def _action_permission(action: str | int) -> tuple[str, str]:
@@ -138,21 +137,21 @@ class AntiSpamCog(commands.Cog):
         target: discord.Member,
         category: str,
         action: str | int,
-    ) -> tuple[str, bool]:
+    ) -> tuple[str, bool, str]:
         should_ping = False
         if action == "kick":
             await target.kick(reason=f"antispam/{category}")
-            return "kick", should_ping
+            return "kick", should_ping, "kick"
         if action == "ban":
             await guild.ban(target, reason=f"antispam/{category}")
-            return "ban", should_ping
+            return "ban", should_ping, "ban"
         mute_minutes = 60
         if isinstance(action, int):
             mute_minutes = max(1, action)
         until = datetime.now(timezone.utc) + timedelta(minutes=mute_minutes)
         await target.timeout(until, reason=f"antispam/{category}")
         should_ping = True
-        return f"mute {mute_minutes}m", should_ping
+        return f"mute {mute_minutes}m", should_ping, "mute"
 
     async def _audit_failure(
         self,
@@ -193,13 +192,13 @@ class AntiSpamCog(commands.Cog):
         target: discord.Member,
         rule: _SpamCatcherRuleConfigModel,
         trigger_message: discord.Message,
-    ) -> tuple[bool, str, str, bool]:
+    ) -> tuple[bool, str, str, bool, str]:
         is_spammer = self._is_spammer(target, rule)
         category = "spammer" if is_spammer else "hacked"
         action: str | int = rule.spammer if is_spammer else rule.hacked
 
         try:
-            action_label, should_ping = await self._execute_action(
+            action_label, should_ping, base_action = await self._execute_action(
                 guild=guild, target=target, category=category, action=action
             )
         except discord.Forbidden as e:
@@ -227,7 +226,7 @@ class AntiSpamCog(commands.Cog):
                 reason=f"Permission ({perm_name}): {reason}",
                 error=str(e),
             )
-            return False, category, "failed", False
+            return False, category, "failed", False, action_type
         except discord.HTTPException as e:
             action_type, _ = self._action_permission(action)
             l.warning(f"[antispam] HTTP error {action_type} on {target}: {e}")
@@ -241,10 +240,8 @@ class AntiSpamCog(commands.Cog):
                 reason="HTTP error during action",
                 error=str(e),
             )
-            return False, category, "failed", False
+            return False, category, "failed", False, action_type
 
-        # 转发触发消息 + 回复 "处理中..." 占位, 必须在 cleanup 删除原消息前执行,
-        # 使转发副本 (含图片/附件) 得以保留
         pending: dict[int, discord.Message] = {}
         if self.audit:
             pending = await self.audit.forward_antispam_trigger(
@@ -277,10 +274,11 @@ class AntiSpamCog(commands.Cog):
                 trigger_message=trigger_message,
                 category=category,
                 action_label=action_label,
+                base_action=base_action,
                 pending=pending,
             )
 
-        return True, category, action_label, should_ping
+        return True, category, action_label, should_ping, base_action
 
     async def _handle_auto_message(self, message: discord.Message):
         try:
@@ -324,7 +322,13 @@ class AntiSpamCog(commands.Cog):
             l.warning("[antispam] client.user unavailable")
             return
 
-        ok, category, action_label, should_ping = await self._process_target(
+        (
+            ok,
+            category,
+            action_label,
+            should_ping,
+            _base_action,
+        ) = await self._process_target(
             actor=t.cast(discord.User, actor),
             guild=message.guild,
             trigger_channel=t.cast(discord.TextChannel, message.channel),
@@ -344,6 +348,7 @@ class AntiSpamCog(commands.Cog):
                 category=category,
                 action_label=action_label,
                 should_ping=should_ping,
+                base_action=_base_action,
             )
             await message.channel.send(notice)
 

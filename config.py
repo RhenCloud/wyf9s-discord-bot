@@ -512,7 +512,7 @@ class Config:
                     l.info(f"[config] Loaded token from {tk_path}")
                 else:
                     l.warning(f"[config] No 'token' key found in {tk_path}")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 l.warning(f"[config] Failed to load {tk_path}: {e}")
         elif tk_required:
             l.error(f"Token file {tk_path} not found!")

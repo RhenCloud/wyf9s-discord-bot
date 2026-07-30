@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from loguru import logger as l
-from yaml import safe_load, safe_dump
+from yaml import safe_dump, safe_load
 
 import utils as u
 

@@ -60,15 +60,13 @@ class EmojiCog(commands.Cog):
         ...
 
     @app_commands.command(name="e", description="Send an emoji")
-    async def e(self, interaction: discord.Interaction, name: str):
-        ...
+    async def e(self, interaction: discord.Interaction, name: str): ...
 
     # 子命令组
     emoji_group = app_commands.Group(name="emoji", description="...")
 
     @emoji_group.command(name="update")
-    async def emoji_update(self, interaction: discord.Interaction):
-        ...
+    async def emoji_update(self, interaction: discord.Interaction): ...
 ```
 
 ### 热重载

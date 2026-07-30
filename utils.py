@@ -1,16 +1,16 @@
-import time
 import enum
 import functools
-from pathlib import Path
-from collections import defaultdict, deque
 import os
 import re
+import time
 import typing as t
+from collections import defaultdict, deque
+from pathlib import Path
 
-from loguru import logger as l
+import aiohttp
 import discord
 from discord.ext import commands
-import aiohttp
+from loguru import logger as l
 
 if t.TYPE_CHECKING:
     from config import ConfigModel

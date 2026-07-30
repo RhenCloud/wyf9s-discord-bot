@@ -19,6 +19,7 @@ def log_format(record):
         "<level>{level}</level> | "
         "<cyan>{name}</cyan>:<cyan>{line}</cyan> | "
         "<level>{message}</level>\n"
+        "<red>{exception}</red>"
     )
 
 
@@ -47,16 +48,15 @@ logging.root.handlers = [InterceptHandler()]
 logging.root.setLevel("DEBUG")
 
 # Now import modules that use logging
-import discord  # noqa: E402
-from discord.ext import commands  # noqa: E402
+import discord
+from discord.ext import commands
 
-from config import Config  # noqa: E402
-import utils as u  # noqa: E402
-
-from modules.audit import AuditLogger  # noqa: E402
-from perm import PermStore  # noqa: E402
-from lang_store import LangStore  # noqa: E402
-from i18n import I18nTranslator  # noqa: E402
+import utils as u
+from config import Config
+from i18n import I18nTranslator
+from lang_store import LangStore
+from modules.audit import AuditLogger
+from perm import PermStore
 
 # endregion import
 
@@ -280,7 +280,8 @@ async def on_tree_error(
     l.opt(exception=error).error(f"[tree] Command '{cmd_name}' from {user_tag}")
 
     # Notify user
-    from i18n import t as _t, lang_of
+    from i18n import lang_of
+    from i18n import t as _t
 
     lang = lang_of(interaction, getattr(client, "lang_store", None))
     err_msg = _t("common.internal_error", lang, error=error)
@@ -355,8 +356,8 @@ async def on_ready():
 
     # Restore persisted voice sessions if any
     try:
-        import os
         import json
+        import os
 
         persist_path = u.get_data_path("voice.yaml")
         if os.path.exists(persist_path):
@@ -382,7 +383,7 @@ async def on_ready():
 
     # Initialize emoji data on startup
     if c.emoji.enabled:
-        from cogs.emoji import EmojiModel  # noqa: F811
+        from cogs.emoji import EmojiModel
 
         if not getattr(client, "emoji_data", None):
             client.emoji_data = EmojiModel()  # ty:ignore[unresolved-attribute]

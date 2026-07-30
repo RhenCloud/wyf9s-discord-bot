@@ -51,8 +51,7 @@ A command's handler method declares the required permission level via the `@u.re
 
 ```python
 @u.requires(u.Permission.MOD)
-async def _handle_lock(self, source, channel=None):
-    ...
+async def _handle_lock(self, source, channel=None): ...
 ```
 
 The `Permission` level enum:

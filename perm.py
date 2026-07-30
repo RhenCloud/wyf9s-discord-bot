@@ -3,7 +3,7 @@ from pathlib import Path
 
 from loguru import logger as l
 from pydantic import BaseModel, Field
-from yaml import safe_load, safe_dump
+from yaml import safe_dump, safe_load
 
 import utils as u
 
@@ -141,9 +141,12 @@ class PermStore:
                 continue
             if r.global_scope:
                 pass
-            elif guild_id is not None and r.guild_id != guild_id:
-                continue
-            elif guild_id is None and not r.global_scope:
+            elif (
+                guild_id is not None
+                and r.guild_id != guild_id
+                or guild_id is None
+                and not r.global_scope
+            ):
                 continue
             if r.module is not None and module == r.module:
                 return True

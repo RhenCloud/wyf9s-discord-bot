@@ -51,6 +51,9 @@ antispam:
   member_not_found: ":x: Member not found in this server"
   action_unban: "Unban"
   action_unmute: "Unmute"
+  snapshot_button_expired: "Expired"
+  public_undo_ban: "Unban by moderator"
+  public_undo_mute: "Unmute by moderator"
   public_notice_hacked: ":rotating_light: {mention} Account looks compromised - temporarily muted. Please contact an admin."
   public_notice_triggered: ":rotating_light: Antispam triggered: {mention} -> **{category}/{action}**"
 

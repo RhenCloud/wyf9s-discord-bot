@@ -88,6 +88,7 @@ class MyCog(commands.Cog):
         # Shared logic for both slash and prefix
         await u.send_msg(source, self._tr(source, "mycog.done"))
 
+
 async def setup(bot: commands.Bot):
     if bot.config.mycog.enabled:
         await bot.add_cog(MyCog(bot))

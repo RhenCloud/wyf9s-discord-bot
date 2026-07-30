@@ -1,15 +1,16 @@
 import io
 
-from loguru import logger as l
-from pydantic import BaseModel, ValidationError
+import aiohttp
 import discord
 from discord import app_commands
 from discord.ext import commands
-import aiohttp
+from loguru import logger as l
+from pydantic import BaseModel, ValidationError
 
-from modules.audit import AuditLogger
-from i18n import t as _t, lang_of, ls
 import utils as u
+from i18n import lang_of, ls
+from i18n import t as _t
+from modules.audit import AuditLogger
 
 
 class EmojiModel(BaseModel):
@@ -23,7 +24,7 @@ class EmojiModel(BaseModel):
 class EmojiCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        self.c = bot.config  # ty:ignore[unresolved-attribute]
+        self.c = getattr(bot, "config")
         self.audit: AuditLogger | None = getattr(bot, "audit", None)
         self.lang_store = getattr(bot, "lang_store", None)
 
@@ -32,11 +33,11 @@ class EmojiCog(commands.Cog):
 
     def cog_load(self):
         if not getattr(self.bot, "emoji_data", None):
-            self.bot.emoji_data = EmojiModel()  # ty:ignore[unresolved-attribute]
+            setattr(self.bot, "emoji_data", EmojiModel())
 
     @property
     def emoji_data(self) -> EmojiModel:
-        return self.bot.emoji_data  # ty:ignore[unresolved-attribute]
+        return getattr(self.bot, "emoji_data")
 
     # ========== Slash Group: /emoji ==========
 
@@ -138,7 +139,7 @@ class EmojiCog(commands.Cog):
                                 ),
                             )
                         )
-        except Exception as err:
+        except Exception as err:  # noqa: BLE001
             await interaction.followup.send(
                 self._tr(
                     interaction, "emoji.fetch_error", name=name, url=imgurl, error=err
@@ -203,7 +204,7 @@ class EmojiCog(commands.Cog):
                                 ),
                             )
                         )
-        except Exception as err:
+        except Exception as err:  # noqa: BLE001
             await ctx.send(
                 self._tr(ctx, "emoji.fetch_error", name=name, url=imgurl, error=err),
                 delete_after=10,
@@ -244,7 +245,7 @@ class EmojiCog(commands.Cog):
         )
         if succ:
             try:
-                self.bot.emoji_data = EmojiModel.model_validate(resp)  # ty:ignore[unresolved-attribute]
+                setattr(self.bot, "emoji_data", EmojiModel.model_validate(resp))
             except ValidationError as e:
                 l.warning(f"[emoji] Emoji list sync failed! \n{e}")
                 return False, str(e)

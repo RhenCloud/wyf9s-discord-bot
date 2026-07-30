@@ -1,14 +1,14 @@
 import time
 
-from loguru import logger as l
 import discord
 from discord import app_commands
 from discord.ext import commands
+from loguru import logger as l
 
-from modules.audit import AuditLogger
-from i18n import t as _t, lang_of, ls
 import utils as u
-
+from i18n import lang_of, ls
+from i18n import t as _t
+from modules.audit import AuditLogger
 
 # Cooldown for /reload to prevent spam: per-user timestamps
 _reload_cooldowns: dict[int, float] = {}
@@ -216,7 +216,7 @@ class AdminCog(commands.Cog):
             try:
                 await self.bot.reload_extension(ext_name)
                 succeeded += 1
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 failures.append(f"`{ext_name}`: {e}")
                 l.error(f"Failed to reload {ext_name}: {e}")
         perm_store = getattr(self.bot, "perm_store", None)

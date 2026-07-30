@@ -51,6 +51,9 @@ antispam:
   member_not_found: ":x: 该服务器内未找到成员"
   action_unban: "取消封禁"
   action_unmute: "解除禁言"
+  snapshot_button_expired: "已过期"
+  public_undo_ban: "由管理员取消封禁"
+  public_undo_mute: "由管理员解除禁言"
   public_notice_hacked: ":rotating_light: {mention} 账号疑似被盗, 已被临时禁言, 请联系管理员。"
   public_notice_triggered: ":rotating_light: 已触发 antispam: {mention} -> **{category}/{action}**"
 

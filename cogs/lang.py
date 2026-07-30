@@ -2,17 +2,18 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from i18n import t as _t, ls
+import utils as u
+from i18n import ls
+from i18n import t as _t
 from lang_store import LangStore
 from modules.audit import AuditLogger
-import utils as u
 
 
 class LangCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.c = bot.config  # ty:ignore[unresolved-attribute]
-        self.lang_store: LangStore = getattr(bot, "lang_store")
+        self.lang_store: LangStore = bot.lang_store  # ty:ignore[unresolved-attribute]
         self.audit: AuditLogger | None = getattr(bot, "audit", None)
 
     @staticmethod

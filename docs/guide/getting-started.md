@@ -163,6 +163,16 @@ sudo systemctl start wyf9s-bot-2
 sudo systemctl enable wyf9s-bot-2
 ```
 
+# =============================================================================
+# Bot Presence (全局)
+# =============================================================================
+# presence 配置用于设置自定义全局 Bot 状态。
+# activity 中可使用 {servers} 与 {members} 占位符，在运行时会替换为当前服务器数量和成员总数。
+# status 为 Discord 的在线状态，可选: online, idle, dnd, invisible。
+presence:
+  enabled: true                # 是否启用自定义 Presence
+  activity: "Serving {servers} Servers with {members} Members"
+  status: online               # online | idle | dnd | invisible
 
 ### 数据目录
 

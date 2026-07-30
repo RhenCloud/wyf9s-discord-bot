@@ -1,12 +1,19 @@
+import re
 from datetime import datetime, timezone
 
-from loguru import logger as l
 import discord
 from discord.ext import commands
+from loguru import logger as l
 
 from config import ConfigModel
 from i18n import t as _t
 from lang_store import LangStore
+
+TAG_PREFIX = "antispam-action/"
+
+
+def _build_antispam_tag(user_id: int, base_action: str) -> str:
+    return f"-# *({TAG_PREFIX}{user_id}/{base_action})*"
 
 
 class AntispamActionView(discord.ui.View):
@@ -19,6 +26,10 @@ class AntispamActionView(discord.ui.View):
         action_label: str,
         lang: str,
         lang_store: LangStore,
+        trigger_channel_id: int,
+        base_action: str,
+        category: str,
+        rule_unban_link: bool = False,
     ):
         super().__init__(timeout=None)
         self.guild_id = guild_id
@@ -27,6 +38,10 @@ class AntispamActionView(discord.ui.View):
         self.action_label = action_label
         self.lang = lang
         self.lang_store = lang_store
+        self.trigger_channel_id = trigger_channel_id
+        self.base_action = base_action
+        self.category = category
+        self.rule_unban_link = rule_unban_link
 
         if "ban" in action_label.lower():
             self._add_btn_unban()
@@ -37,7 +52,7 @@ class AntispamActionView(discord.ui.View):
         btn = discord.ui.Button(
             label=_t("antispam.snapshot_button_unban", self.lang),
             style=discord.ButtonStyle.danger,
-            custom_id=f"antispam:unban:{self.guild_id}:{self.target_id}",
+            custom_id=f"antispam:unban:{self.guild_id}:{self.target_id}:{self.trigger_channel_id}",
         )
         btn.callback = self._handle_unban  # ty:ignore[invalid-assignment]
         self.add_item(btn)
@@ -46,7 +61,7 @@ class AntispamActionView(discord.ui.View):
         btn = discord.ui.Button(
             label=_t("antispam.snapshot_button_unmute", self.lang),
             style=discord.ButtonStyle.danger,
-            custom_id=f"antispam:unmute:{self.guild_id}:{self.target_id}",
+            custom_id=f"antispam:unmute:{self.guild_id}:{self.target_id}:{self.trigger_channel_id}",
         )
         btn.callback = self._handle_unmute  # ty:ignore[invalid-assignment]
         self.add_item(btn)
@@ -56,14 +71,20 @@ class AntispamActionView(discord.ui.View):
             interaction.user.id, interaction.guild.id if interaction.guild else None
         )
 
+    async def _set_expired_button(self, interaction: discord.Interaction) -> None:
+        for item in self.children:
+            if isinstance(item, discord.ui.Button):
+                item.disabled = True
+                item.label = _t("antispam.snapshot_button_expired", self.lang)[:80]
+        self.stop()
+        try:
+            await interaction.response.edit_message(view=self)
+        except discord.HTTPException:
+            pass
+
     async def _finalize_button(
         self, interaction: discord.Interaction, action_key: str
-    ) -> None:
-        """
-        成功后: 禁用按钮并改为 '已由 {moderator} {action}', 更新原消息
-
-        标签属于审计日志消息的一部分, 因此使用服务器语言 (self.lang) 而非操作者语言
-        """
+    ) -> str:
         actor = getattr(interaction.user, "display_name", str(interaction.user))
         action_label = _t(action_key, self.lang)
         for item in self.children:
@@ -80,6 +101,7 @@ class AntispamActionView(discord.ui.View):
             await interaction.response.edit_message(view=self)
         except discord.HTTPException:
             pass
+        return actor
 
     async def _handle_unban(self, interaction: discord.Interaction):
         lang = await self._resolve_lang(interaction)
@@ -98,30 +120,58 @@ class AntispamActionView(discord.ui.View):
                 ephemeral=True,
             )
             return
+
+        try:
+            ban_entry = await guild.fetch_ban(discord.Object(id=self.target_id))
+        except discord.NotFound:
+            ban_entry = None
+        except discord.Forbidden:
+            await interaction.response.send_message(
+                _t("antispam.snapshot_button_no_permission", lang),
+                ephemeral=True,
+            )
+            return
+
+        if ban_entry is None:
+            await self._set_expired_button(interaction)
+            return
+
         try:
             user = await interaction.client.fetch_user(self.target_id)
             await guild.unban(
                 user,
                 reason=_t("antispam.unban_reason", lang, actor=str(interaction.user)),
             )
-            await self._finalize_button(interaction, "antispam.action_unban")
-            # Broadcast antispam action tag to all audit channels
-            audit = interaction.client.audit  # ty:ignore[unresolved-attribute]
-            if audit:
-                await audit._broadcast_antispam_tag(guild, self.target_id, "unban")
         except discord.NotFound:
-            await interaction.response.send_message(
-                _t("antispam.user_not_found_ban", lang), ephemeral=True
-            )
+            await self._set_expired_button(interaction)
+            return
         except discord.Forbidden:
             await interaction.response.send_message(
                 _t("antispam.snapshot_button_no_permission", lang),
                 ephemeral=True,
             )
+            return
         except Exception as e:
             await interaction.response.send_message(
                 _t("antispam.snapshot_button_failed", lang, error=str(e)[:400]),
                 ephemeral=True,
+            )
+            return
+
+        actor = await self._finalize_button(interaction, "antispam.action_unban")
+
+        audit: AuditLogger | None = getattr(interaction.client, "audit", None)
+        if audit:
+            await audit._update_antispam_action_logs(
+                guild=guild,
+                target_id=self.target_id,
+                base_action=self.base_action,
+                trigger_channel_id=self.trigger_channel_id,
+                undo_type="ban",
+                actor=actor,
+                source_message=interaction.message,
+                category=self.category,
+                rule_unban_link=self.rule_unban_link,
             )
 
     async def _handle_unmute(self, interaction: discord.Interaction):
@@ -141,30 +191,54 @@ class AntispamActionView(discord.ui.View):
                 ephemeral=True,
             )
             return
+
         try:
             member = await guild.fetch_member(self.target_id)
+        except discord.NotFound:
+            member = None
+        except discord.Forbidden:
+            await interaction.response.send_message(
+                _t("antispam.snapshot_button_no_permission", lang),
+                ephemeral=True,
+            )
+            return
+
+        if member is None or member.timed_out_until is None:
+            await self._set_expired_button(interaction)
+            return
+
+        try:
             await member.timeout(
                 None,
                 reason=_t("antispam.unmute_reason", lang, actor=str(interaction.user)),
-            )
-            await self._finalize_button(interaction, "antispam.action_unmute")
-            # Broadcast antispam action tag to all audit channels
-            audit = interaction.client.audit  # ty:ignore[unresolved-attribute]
-            if audit:
-                await audit._broadcast_antispam_tag(guild, self.target_id, "unmute")
-        except discord.NotFound:
-            await interaction.response.send_message(
-                _t("antispam.member_not_found", lang), ephemeral=True
             )
         except discord.Forbidden:
             await interaction.response.send_message(
                 _t("antispam.snapshot_button_no_permission", lang),
                 ephemeral=True,
             )
+            return
         except Exception as e:
             await interaction.response.send_message(
                 _t("antispam.snapshot_button_failed", lang, error=str(e)[:400]),
                 ephemeral=True,
+            )
+            return
+
+        actor = await self._finalize_button(interaction, "antispam.action_unmute")
+
+        audit: AuditLogger | None = getattr(interaction.client, "audit", None)
+        if audit:
+            await audit._update_antispam_action_logs(
+                guild=guild,
+                target_id=self.target_id,
+                base_action=self.base_action,
+                trigger_channel_id=self.trigger_channel_id,
+                undo_type="mute",
+                actor=actor,
+                source_message=interaction.message,
+                category=self.category,
+                rule_unban_link=self.rule_unban_link,
             )
 
 
@@ -201,6 +275,15 @@ class AuditLogger:
         if guild is not None:
             return self.lang_store.resolve(0, guild.id)
         return "zh"
+
+    @staticmethod
+    def _get_guild_audit_channel_id(config: ConfigModel, guild_id: int) -> int | None:
+        guild_conf = config.audit.guilds.get(
+            guild_id, config.audit.guilds.get(str(guild_id))
+        )
+        if guild_conf is not None:
+            return guild_conf.channel
+        return None
 
     def _build_embed(
         self,
@@ -333,23 +416,6 @@ class AuditLogger:
         for channel_id in targets:
             await self._send_to_channel(channel_id, embed=embed)
 
-    async def _broadcast_antispam_tag(
-        self, guild: discord.Guild, user_id: int, action: str
-    ) -> None:
-        """Send a stateless tag message to all audit channels.
-        The format is ``-# *(antispam-action/<user_id>/<action>)*``.
-        If ``unban_link`` is enabled in the antispam rule, a message link can be
-        appended (handled by the caller).
-        """
-        if not self.c.audit.enabled:
-            return
-        targets = self._resolve_targets(guild)
-        if not targets:
-            return
-        content = f"-# *(antispam-action/{user_id}/{action})*"
-        for cid in targets:
-            await self._send_to_channel(cid, content=content)
-
     @staticmethod
     def _build_message_snapshot_embed(
         message: discord.Message,
@@ -421,15 +487,6 @@ class AuditLogger:
         guild: discord.Guild,
         trigger_message: discord.Message,
     ) -> dict[int, discord.Message]:
-        """
-        将触发消息转发到各审计频道, 并回复一个 "处理中..." 占位消息。
-
-        必须在清理 (cleanup) 删除原消息之前调用: 转发会创建一份内容快照,
-        即使原消息随后被删除, 转发副本 (含图片/附件) 依然保留, 避免自建
-        snapshot 在原消息删除后图片链接 404 的问题。
-
-        返回 {channel_id: 占位消息}, 供后续 log_antispam_with_snapshot 编辑。
-        """
         if not self.c.audit.enabled:
             return {}
 
@@ -475,6 +532,7 @@ class AuditLogger:
         trigger_message: discord.Message,
         category: str,
         action_label: str,
+        base_action: str,
         pending: dict[int, discord.Message] | None = None,
     ):
         if not self.c.audit.enabled:
@@ -497,6 +555,13 @@ class AuditLogger:
             auto=True,
         )
 
+        tag = _build_antispam_tag(user.id, base_action)
+
+        rule = self.c.antispam.spam_catcher.get(
+            channel.id, self.c.antispam.spam_catcher.get(str(channel.id))
+        )
+        rule_unban_link: bool = getattr(rule, "unban_link", False) if rule else False
+
         pending = pending or {}
 
         for channel_id in targets:
@@ -507,18 +572,185 @@ class AuditLogger:
                 action_label=action_label,
                 lang=lang,
                 lang_store=self.lang_store,
+                trigger_channel_id=channel.id,
+                base_action=base_action,
+                category=category,
+                rule_unban_link=rule_unban_link,
             )
             placeholder = pending.get(channel_id)
             if placeholder is not None:
-                # 转发成功: 编辑占位 "处理中..." 消息为最终操作日志
                 try:
-                    await placeholder.edit(content=None, embed=embed, view=view)
+                    await placeholder.edit(content=tag, embed=embed, view=view)
                     continue
                 except discord.HTTPException as e:
                     l.warning(
                         f"[audit] Failed to edit placeholder in {channel_id}: {e}"
                     )
-            # 转发/占位失败时回退: 自建 snapshot embed + 操作日志
             snapshot_embed = self._build_message_snapshot_embed(trigger_message, lang)
             await self._send_to_channel(channel_id, embed=snapshot_embed)
-            await self._send_to_channel(channel_id, embed=embed, view=view)
+            await self._send_to_channel(channel_id, content=tag, embed=embed, view=view)
+
+    @staticmethod
+    def _build_disabled_undo_view(
+        action_key: str, actor: str, lang: str
+    ) -> discord.ui.View:
+        action_label = _t(action_key, lang)
+        view = discord.ui.View()
+        btn = discord.ui.Button(
+            label=_t(
+                "antispam.snapshot_button_done",
+                lang,
+                actor=actor,
+                action=action_label,
+            )[:80],
+            style=discord.ButtonStyle.secondary,
+            disabled=True,
+        )
+        view.add_item(btn)
+        return view
+
+    async def _update_antispam_action_logs(
+        self,
+        *,
+        guild: discord.Guild,
+        target_id: int,
+        base_action: str,
+        trigger_channel_id: int,
+        undo_type: str,
+        actor: str,
+        source_message: discord.Message,
+        category: str,
+        rule_unban_link: bool,
+    ) -> None:
+        """Search and update all audit log messages and the public log for an undo action."""
+        if not self.c.audit.enabled:
+            return
+
+        tag = _build_antispam_tag(target_id, base_action)
+        action_key = f"antispam.action_un{undo_type}"
+        lang = self._resolve_lang(guild)
+        disabled_view = self._build_disabled_undo_view(action_key, actor, lang)
+
+        targets = self._resolve_targets(guild)
+
+        for channel_id in targets:
+            channel = self.client.get_channel(channel_id)
+            if channel is None:
+                try:
+                    channel = await self.client.fetch_channel(channel_id)
+                except (discord.NotFound, discord.Forbidden, discord.HTTPException):
+                    continue
+            if not isinstance(channel, (discord.TextChannel, discord.Thread)):
+                continue
+            try:
+                async for msg in channel.history(limit=100):
+                    if msg.author != self.client.user:
+                        continue
+                    if msg == source_message:
+                        continue
+                    if tag in (msg.content or ""):
+                        try:
+                            await msg.edit(content=None, view=disabled_view)
+                        except discord.HTTPException:
+                            pass
+            except discord.Forbidden:
+                l.warning(
+                    f"[audit] No permission to search channel {channel_id} for tag"
+                )
+            except discord.HTTPException as e:
+                l.warning(f"[audit] Error searching channel {channel_id}: {e}")
+
+        guild_audit_channel_id = self._get_guild_audit_channel_id(self.c, guild.id)
+        audit_link: str | None = None
+        if rule_unban_link and guild_audit_channel_id is not None:
+            if source_message.channel.id == guild_audit_channel_id:
+                audit_link = source_message.jump_url
+            else:
+                channel = self.client.get_channel(guild_audit_channel_id)
+                if channel is None:
+                    try:
+                        channel = await self.client.fetch_channel(
+                            guild_audit_channel_id
+                        )
+                    except (discord.NotFound, discord.Forbidden, discord.HTTPException):
+                        channel = None
+                if isinstance(channel, (discord.TextChannel, discord.Thread)):
+                    try:
+                        async for msg in channel.history(limit=100):
+                            if msg.author == self.client.user and tag in (
+                                msg.content or ""
+                            ):
+                                audit_link = msg.jump_url
+                                break
+                    except (discord.Forbidden, discord.HTTPException):
+                        pass
+
+        trigger_channel = self.client.get_channel(trigger_channel_id)
+        if trigger_channel is None:
+            try:
+                trigger_channel = await self.client.fetch_channel(trigger_channel_id)
+            except (discord.NotFound, discord.Forbidden, discord.HTTPException):
+                trigger_channel = None
+        if isinstance(trigger_channel, (discord.TextChannel, discord.Thread)):
+            undo_text_key = f"antispam.public_undo_{undo_type}"
+            undo_text = _t(undo_text_key, lang)
+            try:
+                async for msg in trigger_channel.history(limit=100):
+                    if msg.author != self.client.user:
+                        continue
+                    if tag in (msg.content or ""):
+                        new_content = self._rebuild_public_notice_undone(
+                            msg.content, undo_type, undo_text, audit_link, lang
+                        )
+                        if new_content is not None:
+                            try:
+                                await msg.edit(content=new_content)
+                            except discord.HTTPException:
+                                pass
+            except (discord.Forbidden, discord.HTTPException):
+                pass
+
+    @staticmethod
+    def _rebuild_public_notice_undone(
+        original: str,
+        undo_type: str,
+        undo_text: str,
+        audit_link: str | None,
+        lang: str,
+    ) -> str | None:
+        """Rebuild a public notice message to show the undo action.
+
+        Example output:
+            🚨 Antispam triggered: @user (`name`) -> ~~Spammer/ban~~ -> **[Unban by moderator](link)**
+            -# *(antispam-action/xxx/ban)*
+        """
+        lines = original.split("\n")
+        tag_line = ""
+        main_parts: list[str] = []
+
+        for i, line in enumerate(lines):
+            if line.startswith("-# *(" + TAG_PREFIX):
+                tag_line = line
+            else:
+                main_parts.append(line)
+
+        main = "\n".join(main_parts)
+
+        if audit_link:
+            undo_md = f"**[{undo_text}]({audit_link})**"
+        else:
+            undo_md = f"**{undo_text}**"
+
+        triggered_match = re.search(r"^(.*?-> )\*\*(.+?)/(.+?)\*\*(.*?)$", main)
+        if triggered_match:
+            prefix = triggered_match.group(1)
+            cat = triggered_match.group(2)
+            act = triggered_match.group(3)
+            suffix = triggered_match.group(4)
+            new_main = f"{prefix}~~**{cat}/{act}**~~{suffix} -> {undo_md}"
+        else:
+            new_main = f"{main} -> {undo_md}"
+
+        if tag_line:
+            return f"{new_main}\n{tag_line}"
+        return new_main

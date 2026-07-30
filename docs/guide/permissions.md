@@ -51,8 +51,7 @@ def matches_identity(user, values):
 
 ```python
 @u.requires(u.Permission.MOD)
-async def _handle_lock(self, source, channel=None):
-    ...
+async def _handle_lock(self, source, channel=None): ...
 ```
 
 权限等级枚举 `Permission`：

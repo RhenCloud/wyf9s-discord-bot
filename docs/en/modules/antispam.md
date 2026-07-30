@@ -36,19 +36,52 @@ If the bot already has the corresponding permission but the operation is still d
 - **Suspected compromised (mute)**: @s the user, indicating the account is suspected to be compromised, has been temporarily muted, and to contact an administrator (in both Chinese and English).
 - **Stranger account (kick/ban)**: publicly records the triggered antispam action (in both Chinese and English). Since an @ mention of a member who has been kicked / banned will over time show as "Unknown User", the notification appends `` (`username`) `` after the mention for later identification.
 - Whether to notify publicly is controlled by `public-log`.
+- A tag like `-# *(antispam-action/{user_id}/{action})*` is appended at the end of the notice for later locating and undoing.
 
 ## Message Snapshot (Audit)
 
-When writing to the audit log, the triggering message is **forwarded** to the audit channel and a `Processing...` placeholder message is replied; once cleanup and other processing are complete, that placeholder message is edited into the final "automatic operation log" (with an undo button).
+When writing to the audit log, the triggering message is **forwarded** to the audit channel and a `Processing...` placeholder message is replied; once cleanup and other processing are complete, that placeholder message is edited into the final "Automated Action Log" (with an undo button, and a fixed-format tag above). The message looks like:
+
+```
+-# *(antispam-action/992995849946804304/ban)*
+[Automated Action Log embed]
+```
 
 - It uses **forwarding** rather than building a snapshot: forwarding keeps a copy of the content in the audit channel, so even if the original message is subsequently cleaned up and deleted, images / attachments will not 404.
 - Forwarding must complete **before** the original message is cleaned up and deleted; if forwarding fails, it falls back to building a self-made snapshot embed.
 
-## Message Cleanup
+## Undoing Actions (Unban / Unmute)
 
-When `clear-message` specifies a number of minutes, it cleans up the user's messages from the last N minutes across the **server scope** (internally reusing the bulk cleanup service, writing no extra audit entry, with the result merged into this record). Set to `null` / `false` to disable.
+Mods/Admins can undo antispam actions via the buttons on the audit log embed. The undo flow is **stateless** — it does not rely on a database, only on searching for the tag.
 
-Cleanup also covers **forum posts**: it deletes both the user's messages inside forum threads and the **entire threads authored by the user** (`delete_threads`, which also removes other people's messages inside those threads).
+### Unban
+
+1. Click the **Unban** button → the bot first checks if the user is still banned.
+2. If already manually unbanned → the button changes to **Expired** (gray, disabled), no further actions.
+3. If still banned → performs the unban, the button changes to **{action} by {actor}**.
+
+### Unmute
+
+1. Click the **Unmute** button → the bot first checks if the member is still timed out.
+2. If the mute has already expired or been manually removed → the button changes to **Expired** (gray, disabled), no further actions.
+3. If still timed out → removes the timeout, the button changes to **{action} by {actor}**.
+
+### Cross-Channel Sync
+
+After undoing, the bot searches all audit log channels (global + per-server) for messages with the same tag and automatically disables their buttons. If `public-log` is enabled, the public notice is also edited, with the format changing to:
+
+```
+🚨 Antispam triggered: <@user> (`name`) -> ~~Spammer/ban~~ -> **[Unban by moderator](audit-log-link)**
+-# *(antispam-action/xxx/ban)*
+```
+
+- The public log's `**Unban by moderator**` does not reveal which specific mod performed the action.
+- If `unban-link` is enabled and the server has its own audit channel configured, the text will be a link pointing to the audit log message; otherwise it's plain text.
+
+### Notes
+
+- **Kick** actions cannot be undone — their audit cards have no undo button.
+- Errors from inaccessible channels during cross-channel sync are silently ignored.
 
 ## Configuration
 
@@ -62,6 +95,7 @@ antispam:
   #   hacked: mute              # Suspected-compromised handling: kick | ban | mute | minutes
   #   clear-message: 3          # Auto-cleanup window (minutes, null/false to disable)
   #   public-log: true          # Whether to notify publicly in the channel
+  #   unban-link: false         # Whether to append audit log link on undo (requires server audit channel)
   #   stranger-roles: [1318980288046698506, "New Member"]
   #   ignored-roles: ["Admin", "Member"]
 ```
@@ -81,6 +115,7 @@ antispam:
 | `hacked` | `kick` / `ban` / `mute` / minutes(int) | `mute` | How to handle suspected-compromised accounts |
 | `clear-message` | `int` / `null` / `false` | `3` | Message cleanup window (minutes); `null`/`false` to disable |
 | `public-log` | `bool` | `true` | Whether to notify the result publicly in the channel |
+| `unban-link` | `bool` | `false` | Whether to append audit log message link on undo (requires server audit channel configured) |
 | `stranger-roles` | `list[int \| str]` | `[]` | List of roles treated as stranger accounts (role ID or name) |
 | `ignored-roles` | `list[int \| str]` | `[]` | List of roles to skip processing (having any one is enough to skip) |
 

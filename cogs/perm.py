@@ -2,13 +2,14 @@ import io
 
 import discord
 from discord import app_commands
-from discord.utils import escape_markdown
 from discord.ext import commands
+from discord.utils import escape_markdown
 from loguru import logger as l
 
-from modules.audit import AuditLogger
-from i18n import t as _t, lang_of, ls
 import utils as u
+from i18n import lang_of, ls
+from i18n import t as _t
+from modules.audit import AuditLogger
 from perm import PermStore
 
 

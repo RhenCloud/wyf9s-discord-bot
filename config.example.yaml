@@ -119,6 +119,7 @@ antispam:
   #   hacked: mute              # 疑似被盗处理: kick | ban | mute | 分钟数
   #   clear-message: 3          # 自动清理窗口 (分钟, null/false 禁用)
   #   public-log: true          # 是否在频道公开通知
+  #   unban-link: false         # 公开日志解封时是否附加审计日志链接 (需配置服务器审计频道)
   #   stranger-roles: [1318980288046698506, "新成员"]  # 被视为陌生人的角色列表 (支持身份组 ID 或名称)
   #   ignored-roles: ["管理员", "成员"]  # 忽略处理的角色列表, 拥有任一角色的成员不会被处理 (支持身份组 ID 或名称)
 
@@ -146,3 +147,14 @@ perm:
 announce:
   source_channel: null        # 公告频道 ID (News Channel)
   # /subscribe 会使目标频道关注此频道，Discord 自动转发消息
+
+# =============================================================================
+# Bot Presence (global)
+# =============================================================================
+# presence 配置用于全局自定义 Bot 状态。
+# 在 activity 中可使用 {servers} 与 {members} 占位符，运行时会替换为当前服务器数量和成员总数。
+# status 为 Discord 的可用状态，默认 online。
+presence:
+  enabled: true                # 是否启用自定义 Presence
+  activity: "Serving {servers} Servers with {members} Members"
+  status: online               # online | idle | dnd | invisible

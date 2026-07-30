@@ -1,12 +1,14 @@
-from loguru import logger as l
+import json
+
 import discord
 from discord import app_commands
 from discord.ext import commands
+from loguru import logger as l
 
-from modules.audit import AuditLogger
-from i18n import t as _t, lang_of, ls
 import utils as u
-import json
+from i18n import lang_of, ls
+from i18n import t as _t
+from modules.audit import AuditLogger
 
 
 def _voice_permission(
@@ -207,11 +209,11 @@ class VoiceCog(commands.Cog):
             )
             return
 
-        channel_name = guild.voice_client.channel.name
+        channel = guild.voice_client.channel
         await guild.voice_client.disconnect(force=False)
-        await u.send_msg(source, self._tr(source, "voice.left", channel=channel_name))
+        await u.send_msg(source, self._tr(source, "voice.left", channel=channel.name))
 
-        l.info(f"Bot left voice: {channel_name}")
+        l.info(f"Bot left voice: {channel.name} ({channel.id})")
         # Clean up persisted voice state if present
         try:
             data_path = u.get_data_path("voice.yaml")
@@ -228,7 +230,7 @@ class VoiceCog(commands.Cog):
                 user=user,
                 guild=source.guild,
                 channel=source.channel,
-                detail=f"Left voice `{channel_name}`",
+                detail=f"Left voice `{channel.name}`",
             )
 
 
