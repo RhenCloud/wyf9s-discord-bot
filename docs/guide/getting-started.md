@@ -1,5 +1,3 @@
-<!-- markdownlint-disable -->
-<!-- markdownlint-disable-file -->
 # 快速开始
 
 ## 前置要求

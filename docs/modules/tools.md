@@ -104,7 +104,7 @@
 - 若不使用时间范围，`message_count` 与 `within_minutes` 至少设置一个。
   - **特例**：`delete_threads=true` 且指定了 `forum_scan_count` 时，`forum_scan_count` 本身即作为限制，无需再设置 `message_count`/`within_minutes`。此时**只扫描论坛帖子、不扫描普通频道消息**：显式指定论坛频道则只处理该论坛，否则处理服务器内所有论坛。
 - 若无任何范围限制，则必须至少提供一种匹配过滤条件。
-- **超过 14 天的消息无法批量删除**（Discord 限制）。当这类消息数量不超过 `tools.clear-single-delete-max`（默认 `20`，`0` 禁用）时，会自动回退为逐条删除；超出阈值则单独计为「因超过 14 天不可删」。
+- **超过 14 天的消息无法批量删除**（Discord 限制）。当这类消息数量不超过 `tools.clear_single_delete_max`（默认 `20`，`0` 禁用）时，会自动回退为逐条删除；超出阈值则单独计为「因超过 14 天不可删」。
 - 机器人自己发出的、带 `[clear-message]` 标记的结果消息会被自动跳过，避免误删。
 
 #### 前缀命令 flag
@@ -173,7 +173,7 @@ tools:
     mod_multiplier: 3     # mod 额度倍数; admin 不受限速
     random: 10
     uuid: 10
-    "2file": 10           # to-file 的 YAML 键名 (兼容旧称)
+    "2file": 10           # to-file 的 YAML 键名 (数字开头需引号)
 ```
 
 | 字段 | 类型 | 默认值 | 说明 |

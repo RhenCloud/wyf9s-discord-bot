@@ -148,7 +148,7 @@ voicechannel:
 # 反垃圾消息模块 (无指令, 基于事件)
 antispam:
   enabled: false
-  spam-catcher: {}
+  spam_catcher: {}
 
 # 管理员和权限配置
 admins:

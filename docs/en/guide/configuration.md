@@ -148,7 +148,7 @@ voicechannel:
 # Anti-spam module (no commands, event-based)
 antispam:
   enabled: false
-  spam-catcher: {}
+  spam_catcher: {}
 
 # Admin and permission config
 admins:

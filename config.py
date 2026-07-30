@@ -100,7 +100,7 @@ class _ToolsRateLimitConfigModel(BaseModel):
     e: int = 10
     """e 指令: 窗口内普通用户最大次数"""
 
-    emoji_info: int = Field(default=10, alias="emoji-info")
+    emoji_info: int = 10
     """emoji info 指令: 窗口内普通用户最大次数"""
 
     def limit_for(self, command: str) -> int | None:
@@ -298,7 +298,7 @@ class _ToolsConfigModel(BaseModel):
     ratelimit: _ToolsRateLimitConfigModel = _ToolsRateLimitConfigModel()
     """限速配置 (random / uuid / 2file)"""
 
-    clear_single_delete_max: int = Field(default=20, alias="clear-single-delete-max")
+    clear_single_delete_max: int = 20
     """clear-message 批量清理时, 若超过 14 天不可批量删除的消息数不超过此值,
     则回退为逐条删除以规避 bulk delete 的 14 天限制; 设为 0 表示禁用回退"""
 
@@ -336,19 +336,17 @@ class _SpamCatcherRuleConfigModel(BaseModel):
     hacked: t.Literal["kick", "ban", "mute"] | int = "mute"
     """正常账号疑似被盗处理方式: kick/ban/mute/分钟数"""
 
-    clear_message: int | None = Field(default=3, alias="clear-message")
+    clear_message: int | None = 3
     """清理消息窗口 (分钟), null/false 表示禁用"""
 
-    public_log: bool = Field(default=True, alias="public-log")
+    public_log: bool = True
     """是否在频道公开通知处理结果"""
-    unban_link: bool = Field(default=False, alias="unban-link")
+    unban_link: bool = False
     """是否在 antispam 解封日志中添加链接（需要 log_channel 配置）"""
-    stranger_roles: list[int | str] = Field(
-        default_factory=list, alias="stranger-roles"
-    )
+    stranger_roles: list[int | str] = Field(default_factory=list)
     """被视为陌生账号的角色列表 (支持身份组 ID 或名称)"""
 
-    ignored_roles: list[int | str] = Field(default_factory=list, alias="ignored-roles")
+    ignored_roles: list[int | str] = Field(default_factory=list)
     """忽略处理的角色列表, 拥有任一角色的成员不会被处理 (支持身份组 ID 或名称)"""
 
     @field_validator("clear_message", mode="before")
@@ -356,7 +354,7 @@ class _SpamCatcherRuleConfigModel(BaseModel):
         if v in (None, False):
             return None
         if isinstance(v, bool):
-            raise ValueError("clear-message must be int or null/false")
+            raise ValueError("clear_message must be int or null/false")
         return v
 
     @field_validator("hacked", mode="before")
@@ -378,7 +376,7 @@ class _AntiSpamConfigModel(BaseModel):
     """是否启用反垃圾消息模块"""
 
     spam_catcher: dict[int | str, _SpamCatcherRuleConfigModel] = Field(
-        default_factory=dict, alias="spam-catcher"
+        default_factory=dict
     )
     """按频道配置的捕获规则"""
 
@@ -457,6 +455,27 @@ class ConfigModel(BaseModel):
     announce: _AnnounceConfigModel = _AnnounceConfigModel()
 
 
+def _normalize_config_keys(d: dict) -> dict:
+    """Recursively normalize dict keys: replace '-' with '_'.
+
+    If both forms like 'foo-bar' and 'foo_bar' exist, the '_' version has priority.
+    """
+    result = {}
+    for key, value in d.items():
+        if isinstance(value, dict):
+            value = _normalize_config_keys(value)
+        if isinstance(key, str):
+            normalized = key.replace("-", "_")
+            if "-" in key:
+                if normalized not in result:
+                    result[normalized] = value
+            else:
+                result[normalized] = value
+        else:
+            result[key] = value
+    return result
+
+
 class Config:
     """
     配置系统
@@ -523,6 +542,9 @@ class Config:
         if token:
             raw_config["token"] = token
             l.info("[config] Using token from argument/environment variable")
+
+        # normalize keys: support both '-' and '_' forms, '_' has priority
+        raw_config = _normalize_config_keys(raw_config)
 
         # process config
         self.config = ConfigModel.model_validate(raw_config)

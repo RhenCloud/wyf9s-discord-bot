@@ -52,7 +52,7 @@ emoji:
     uuid: 10
     "2file": 10
     e: 10
-    "emoji-info": 10
+    emoji_info: 10
 
 # =============================================================================
 # 工具/管理指令模块
@@ -62,7 +62,7 @@ tools:
   enabled: false
   slash: true
   prefix: true
-  clear-single-delete-max: 20 # clear-message: 超 14 天不可批量删的消息数 <= 此值时回退逐条删除 (0 = 禁用)
+  clear_single_delete_max: 20 # clear-message: 超 14 天不可批量删的消息数 <= 此值时回退逐条删除 (0 = 禁用)
   ratelimit:                  # 限速 (仅作用于 random / uuid / to-file)
     enabled: true             # 是否启用限速
     window: 60                # 时间窗口 (秒)
@@ -112,16 +112,16 @@ voicechannel:
 # =============================================================================
 antispam:
   enabled: false
-  spam-catcher: {}            # 按频道配置的捕获规则 (见下方示例)
+  spam_catcher: {}            # 按频道配置的捕获规则 (见下方示例)
   # 示例:
   # 1514685631316496615:
   #   spammer: ban              # 陌生人处理: kick | ban
   #   hacked: mute              # 疑似被盗处理: kick | ban | mute | 分钟数
-  #   clear-message: 3          # 自动清理窗口 (分钟, null/false 禁用)
-  #   public-log: true          # 是否在频道公开通知
-  #   unban-link: false         # 公开日志解封时是否附加审计日志链接 (需配置服务器审计频道)
-  #   stranger-roles: [1318980288046698506, "新成员"]  # 被视为陌生人的角色列表 (支持身份组 ID 或名称)
-  #   ignored-roles: ["管理员", "成员"]  # 忽略处理的角色列表, 拥有任一角色的成员不会被处理 (支持身份组 ID 或名称)
+  #   clear_message: 3          # 自动清理窗口 (分钟, null/false 禁用)
+  #   public_log: true          # 是否在频道公开通知
+  #   unban_link: false         # 公开日志解封时是否附加审计日志链接 (需配置服务器审计频道)
+  #   stranger_roles: [1318980288046698506, "新成员"]  # 被视为陌生人的角色列表 (支持身份组 ID 或名称)
+  #   ignored_roles: ["管理员", "成员"]  # 忽略处理的角色列表, 拥有任一角色的成员不会被处理 (支持身份组 ID 或名称)
 
 # =============================================================================
 # 管理员和权限配置

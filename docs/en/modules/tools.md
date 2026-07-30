@@ -104,7 +104,7 @@ Batch clear messages by various filter conditions, supporting a single channel o
 - If no time range is used, at least one of `message_count` and `within_minutes` must be set.
   - **Special case**: When `delete_threads=true` and `forum_scan_count` is specified, `forum_scan_count` itself acts as the limit, so there is no need to set `message_count`/`within_minutes`. In this case **only forum threads are scanned, and regular channel messages are not**: if a forum channel is explicitly specified, only that forum is processed; otherwise all forums in the server are processed.
 - If there is no range limit at all, at least one matching filter condition must be provided.
-- **Messages older than 14 days cannot be batch deleted** (Discord limitation). When the number of such messages does not exceed `tools.clear-single-delete-max` (default `20`, `0` disables), they are automatically deleted one by one; if the threshold is exceeded, they are counted separately as "undeletable because older than 14 days".
+- **Messages older than 14 days cannot be batch deleted** (Discord limitation). When the number of such messages does not exceed `tools.clear_single_delete_max` (default `20`, `0` disables), they are automatically deleted one by one; if the threshold is exceeded, they are counted separately as "undeletable because older than 14 days".
 - Result messages sent by the bot itself with the `[clear-message]` tag are automatically skipped to avoid accidental deletion.
 
 #### Prefix Command Flags
@@ -173,7 +173,7 @@ tools:
     mod_multiplier: 3     # mod quota multiplier; admin is exempt from rate limiting
     random: 10
     uuid: 10
-    "2file": 10           # YAML key name for to-file (legacy name compatibility)
+    "2file": 10           # YAML key name for to-file (starts with a digit, must be quoted)
 ```
 
 | Field | Type | Default | Description |

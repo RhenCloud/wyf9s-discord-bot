@@ -651,7 +651,7 @@ class ClearMessageService:
         # 超过 14 天的消息无法通过 bulk delete 删除 (Discord 限制),
         # 只能逐条 Message.delete() (不受 14 天限制) 删除。
         # 为避免逐条删除触发大量 API 调用/限速, 仅当此类消息总数不超过
-        # 配置阈值 (tools.clear-single-delete-max) 时才回退为逐条删除。
+        # 配置阈值 (tools.clear_single_delete_max) 时才回退为逐条删除。
         bulk_deletable_seconds = 14 * 86400 - 300
 
         def is_bulk_deletable(msg: discord.Message) -> bool:

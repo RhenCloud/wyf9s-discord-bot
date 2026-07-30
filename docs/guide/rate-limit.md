@@ -60,7 +60,7 @@ tools:
 | `"2file"` | `int` | `10` | `to-file` 每窗口最大次数（YAML 键名，内部字段 `to_file`） |
 
 ::: tip
-`"2file"` 是 `to-file` 指令在 YAML 中的键名（历史兼容），内部 Pydantic 字段名为 `to_file`，通过 `Field(alias="2file")` 映射。
+`"2file"` 是 `to-file` 指令在 YAML 中的键名（数字开头，需引号），内部 Pydantic 字段名为 `to_file`，通过 `Field(alias="2file")` 映射。
 :::
 
 ## Discord API Rate Limit
@@ -69,7 +69,7 @@ tools:
 
 值得注意的场景：
 
-- **批量清理消息**（`clear-message`）：使用 `bulk_delete`（每批最多 100 条），并且 Discord **不允许批量删除超过 14 天的消息**。当此类超期消息数量不超过 `tools.clear-single-delete-max`（默认 `20`，设为 `0` 禁用）时，会**回退为逐条 `Message.delete()`**（不受 14 天限制）删除；超出阈值则仍单独计数为「因超过 14 天不可删」，避免大量逐条请求触发限流。
+- **批量清理消息**（`clear-message`）：使用 `bulk_delete`（每批最多 100 条），并且 Discord **不允许批量删除超过 14 天的消息**。当此类超期消息数量不超过 `tools.clear_single_delete_max`（默认 `20`，设为 `0` 禁用）时，会**回退为逐条 `Message.delete()`**（不受 14 天限制）删除；超出阈值则仍单独计数为「因超过 14 天不可删」，避免大量逐条请求触发限流。
 - **表情发送**：会向远程 `base_url` 发起 HTTP 请求（走 `proxy` 配置），受远程服务可用性影响。
 - **表情搜索自动补全**：`max_results` 过大可能导致 Discord 自动补全调用失败，默认 `25`。
 

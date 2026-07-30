@@ -60,7 +60,7 @@ tools:
 | `"2file"` | `int` | `10` | Max number of `to-file` calls per window (YAML key name, internal field `to_file`) |
 
 ::: tip
-`"2file"` is the YAML key name of the `to-file` command (kept for historical compatibility); the internal Pydantic field name is `to_file`, mapped via `Field(alias="2file")`.
+`"2file"` is the YAML key name of the `to-file` command (starts with a digit so it must be quoted); the internal Pydantic field name is `to_file`, mapped via `Field(alias="2file")`.
 :::
 
 ## Discord API rate limit
@@ -69,7 +69,7 @@ Beyond application-layer rate limiting, the Discord platform itself imposes a **
 
 Scenarios worth noting:
 
-- **Bulk message cleanup** (`clear-message`): uses `bulk_delete` (up to 100 messages per batch), and Discord **does not allow bulk-deleting messages older than 14 days**. When the number of such expired messages does not exceed `tools.clear-single-delete-max` (default `20`, set to `0` to disable), it **falls back to deleting them one by one with `Message.delete()`** (not subject to the 14-day limit); if the threshold is exceeded, they are still counted individually as "undeletable because older than 14 days", to avoid triggering rate limits with a large number of per-message requests.
+- **Bulk message cleanup** (`clear-message`): uses `bulk_delete` (up to 100 messages per batch), and Discord **does not allow bulk-deleting messages older than 14 days**. When the number of such expired messages does not exceed `tools.clear_single_delete_max` (default `20`, set to `0` to disable), it **falls back to deleting them one by one with `Message.delete()`** (not subject to the 14-day limit); if the threshold is exceeded, they are still counted individually as "undeletable because older than 14 days", to avoid triggering rate limits with a large number of per-message requests.
 - **Emoji sending**: makes an HTTP request to the remote `base_url` (via the `proxy` config), affected by the availability of the remote service.
 - **Emoji search autocomplete**: too large a `max_results` may cause Discord autocomplete calls to fail; the default is `25`.
 

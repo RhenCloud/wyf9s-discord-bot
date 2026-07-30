@@ -11,7 +11,7 @@ hooks = [
   { id = "ruff-format" },
 ]
 
-# Local hooks (ty type check + markdownlint via PyMarkdown)
+# Local hooks (ty type check)
 [[repos]]
 repo = "local"
 

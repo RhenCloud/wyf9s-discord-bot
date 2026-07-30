@@ -24,7 +24,7 @@ class EmojiModel(BaseModel):
 class EmojiCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        self.c = getattr(bot, "config")
+        self.c = bot.config  # ty:ignore[unresolved-attribute]
         self.audit: AuditLogger | None = getattr(bot, "audit", None)
         self.lang_store = getattr(bot, "lang_store", None)
 
@@ -33,11 +33,11 @@ class EmojiCog(commands.Cog):
 
     def cog_load(self):
         if not getattr(self.bot, "emoji_data", None):
-            setattr(self.bot, "emoji_data", EmojiModel())
+            self.bot.emoji_data = EmojiModel()  # ty:ignore[unresolved-attribute]
 
     @property
     def emoji_data(self) -> EmojiModel:
-        return getattr(self.bot, "emoji_data")
+        return self.bot.emoji_data  # ty:ignore[unresolved-attribute]
 
     # ========== Slash Group: /emoji ==========
 
@@ -245,7 +245,7 @@ class EmojiCog(commands.Cog):
         )
         if succ:
             try:
-                setattr(self.bot, "emoji_data", EmojiModel.model_validate(resp))
+                self.bot.emoji_data = EmojiModel.model_validate(resp)  # ty:ignore[unresolved-attribute]
             except ValidationError as e:
                 l.warning(f"[emoji] Emoji list sync failed! \n{e}")
                 return False, str(e)

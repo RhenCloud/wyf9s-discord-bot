@@ -10,13 +10,13 @@ A channel-level anti-spam module based on the `on_message` event, with **no comm
 For every **non-bot** message in a channel that has rules configured:
 
 1. Ignore bot messages and direct messages.
-2. Begin evaluation once the channel's `spam-catcher` rule is hit.
-3. If the author has any role in `ignored-roles` → **skip**.
+2. Begin evaluation once the channel's `spam_catcher` rule is hit.
+3. If the author has any role in `ignored_roles` → **skip**.
 4. Determine the author's category:
-   - **Stranger account (spammer)**: has no roles at all, **OR** all of its roles belong to `stranger-roles`.
+   - **Stranger account (spammer)**: has no roles at all, **OR** all of its roles belong to `stranger_roles`.
    - **Normal account (hacked, suspected-compromised)**: all other cases.
 5. Execute the corresponding action by category (`spammer` / `hacked`).
-6. Optional: clean up the user's recent messages (`clear-message`), notify publicly in the channel (`public-log`).
+6. Optional: clean up the user's recent messages (`clear_message`), notify publicly in the channel (`public_log`).
 7. Write the result (success / failure) to the [audit log](/en/modules/audit) (`antispam-auto-catch`, marked as an automatic operation).
 
 ## Actions and Required Permissions
@@ -35,7 +35,7 @@ If the bot already has the corresponding permission but the operation is still d
 
 - **Suspected compromised (mute)**: @s the user, indicating the account is suspected to be compromised, has been temporarily muted, and to contact an administrator (in both Chinese and English).
 - **Stranger account (kick/ban)**: publicly records the triggered antispam action (in both Chinese and English). Since an @ mention of a member who has been kicked / banned will over time show as "Unknown User", the notification appends `` (`username`) `` after the mention for later identification.
-- Whether to notify publicly is controlled by `public-log`.
+- Whether to notify publicly is controlled by `public_log`.
 - A tag like `-# *(antispam-action/{user_id}/{action})*` is appended at the end of the notice for later locating and undoing.
 
 ## Message Snapshot (Audit)
@@ -68,7 +68,7 @@ Mods/Admins can undo antispam actions via the buttons on the audit log embed. Th
 
 ### Cross-Channel Sync
 
-After undoing, the bot searches all audit log channels (global + per-server) for messages with the same tag and automatically disables their buttons. If `public-log` is enabled, the public notice is also edited, with the format changing to:
+After undoing, the bot searches all audit log channels (global + per-server) for messages with the same tag and automatically disables their buttons. If `public_log` is enabled, the public notice is also edited, with the format changing to:
 
 ```
 🚨 Antispam triggered: <@user> (`name`) -> ~~Spammer/ban~~ -> **[Unban by moderator](audit-log-link)**
@@ -76,7 +76,7 @@ After undoing, the bot searches all audit log channels (global + per-server) for
 ```
 
 - The public log's `**Unban by moderator**` does not reveal which specific mod performed the action.
-- If `unban-link` is enabled and the server has its own audit channel configured, the text will be a link pointing to the audit log message; otherwise it's plain text.
+- If `unban_link` is enabled and the server has its own audit channel configured, the text will be a link pointing to the audit log message; otherwise it's plain text.
 
 ### Notes
 
@@ -88,16 +88,16 @@ After undoing, the bot searches all audit log channels (global + per-server) for
 ```yaml
 antispam:
   enabled: false
-  spam-catcher: {}        # Catch rules configured per channel
+  spam_catcher: {}        # Catch rules configured per channel
   # Example:
   # 1514685631316496615:
   #   spammer: ban              # Stranger handling: kick | ban
   #   hacked: mute              # Suspected-compromised handling: kick | ban | mute | minutes
-  #   clear-message: 3          # Auto-cleanup window (minutes, null/false to disable)
-  #   public-log: true          # Whether to notify publicly in the channel
-  #   unban-link: false         # Whether to append audit log link on undo (requires server audit channel)
-  #   stranger-roles: [1318980288046698506, "New Member"]
-  #   ignored-roles: ["Admin", "Member"]
+  #   clear_message: 3          # Auto-cleanup window (minutes, null/false to disable)
+  #   public_log: true          # Whether to notify publicly in the channel
+  #   unban_link: false         # Whether to append audit log link on undo (requires server audit channel)
+  #   stranger_roles: [1318980288046698506, "New Member"]
+  #   ignored_roles: ["Admin", "Member"]
 ```
 
 ### Top-level fields
@@ -105,7 +105,7 @@ antispam:
 | Field | Type | Default | Description |
 | --- | --- | --- | --- |
 | `enabled` | `bool` | `false` | Whether to enable the anti-spam module |
-| `spam-catcher` | `dict[channel ID, rule]` | `{}` | Catch rules configured per channel |
+| `spam_catcher` | `dict[channel ID, rule]` | `{}` | Catch rules configured per channel |
 
 ### Per-rule fields
 
@@ -113,11 +113,11 @@ antispam:
 | --- | --- | --- | --- |
 | `spammer` | `kick` / `ban` | `ban` | How to handle stranger accounts |
 | `hacked` | `kick` / `ban` / `mute` / minutes(int) | `mute` | How to handle suspected-compromised accounts |
-| `clear-message` | `int` / `null` / `false` | `3` | Message cleanup window (minutes); `null`/`false` to disable |
-| `public-log` | `bool` | `true` | Whether to notify the result publicly in the channel |
-| `unban-link` | `bool` | `false` | Whether to append audit log message link on undo (requires server audit channel configured) |
-| `stranger-roles` | `list[int \| str]` | `[]` | List of roles treated as stranger accounts (role ID or name) |
-| `ignored-roles` | `list[int \| str]` | `[]` | List of roles to skip processing (having any one is enough to skip) |
+| `clear_message` | `int` / `null` / `false` | `3` | Message cleanup window (minutes); `null`/`false` to disable |
+| `public_log` | `bool` | `true` | Whether to notify the result publicly in the channel |
+| `unban_link` | `bool` | `false` | Whether to append audit log message link on undo (requires server audit channel configured) |
+| `stranger_roles` | `list[int \| str]` | `[]` | List of roles treated as stranger accounts (role ID or name) |
+| `ignored_roles` | `list[int \| str]` | `[]` | List of roles to skip processing (having any one is enough to skip) |
 
-- The keys of `spam-catcher` are channel IDs (either numbers or strings).
+- The keys of `spam_catcher` are channel IDs (either numbers or strings).
 - Role list items support **role ID** or **role name** (roles with the same name will all be matched).
