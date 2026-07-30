@@ -16,22 +16,10 @@ Fix any remaining errors before committing.
 
 ### prek (pre-commit)
 
-The repo ships a [`prek`](https://prek.j178.dev) config (`prek.toml`, prek-native
-TOML — not the `.pre-commit-config.yaml` compat format). It runs ruff (official
-pre-commit hooks), `ty check`, and markdownlint (PyMarkdown).
+The repo ships a [`prek`](https://prek.j178.dev) config (`prek.toml`, prek-native TOML — not the `.pre-commit-config.yaml` compat format). It runs ruff (official pre‑commit hooks) and `ty check`.
 
 - Install the git hook once per clone: `uvx prek install`
 - Run on demand: `uvx prek run --all-files`
-- Markdownlint uses `pymarkdownlnt` (a uv dev dependency) configured via
-  `.pymarkdown.json`. The ruleset follows the
-  [SiiWay Markdown standard](https://cn.siiway.org/zh/dev/markdown): ATX
-  headings (MD003), `-` bullets (MD004), `siblings_only` duplicate headings
-  (MD024), heading trailing-punctuation ban incl. full-width (MD026), fenced
-  `---` rules / backtick code fences (MD035/MD046/MD048); MD007/MD013/MD033/MD041
-  are disabled for CJK prose + VitePress/Vue HTML. Fenced code blocks **must**
-  declare a language (use `text` when none fits — MD040). MD049/MD050 (italic /
-  bold style) aren't supported by PyMarkdown. VitePress `layout: home` pages are
-  excluded from the hook (frontmatter-only).
 
 ## Project Structure
 
