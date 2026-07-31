@@ -1,7 +1,7 @@
 # 复制此文件为 docker-compose.yaml 并根据需要修改
 services:
   bot:
-    image: ghcr.io/rhencloud/wyf9s-discord-bot:latest
+    image: ghcr.io/wyf9/wyf9s-discord-bot:latest
     container_name: wyf9s-discord-bot
     restart: unless-stopped
     volumes:
