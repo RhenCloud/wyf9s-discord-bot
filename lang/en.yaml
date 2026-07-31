@@ -269,7 +269,6 @@ perm:
   removed_count: ":white_check_mark: **Removed {count} rule(s)**:"
   no_rules: ":information_source: **No permission rules found**"
   show_title: "Permission Rules"
-  show_header: "Permission Rules (scope: `{scope}`, {count} rule(s))"
   show_builtin_header: "Server Admins (scope: {scope}, {count} rule(s))"
   show_builtin_owner: ":crown: Server Owner: <@{id}> (`{id}`)"
   show_builtin_admin_role: ":shield: Admin Role: {role}"

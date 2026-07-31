@@ -573,7 +573,7 @@ class LockCog(commands.Cog):
     @tasks.loop(minutes=1)
     async def _check_schedules(self):
         now = datetime.now(timezone.utc)
-        now_local = datetime.now(tz=timezone.utc)
+        now_local = datetime.now(tz=timezone(timedelta(hours=8)))
         to_remove: list[int] = []
 
         for idx, schedule in enumerate(self.store.schedules):

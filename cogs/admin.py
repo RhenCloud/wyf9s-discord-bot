@@ -255,7 +255,15 @@ class AdminCog(commands.Cog):
         from config import Config
 
         try:
-            new_config = Config().config
+            cfg_instance = getattr(self.bot, "_config_instance", None)
+            if cfg_instance is not None:
+                new_config = Config(
+                    config_path=cfg_instance._config_path,
+                    token_file=cfg_instance._token_file,
+                    token=cfg_instance._token,
+                ).config
+            else:
+                new_config = Config().config
         except Exception as e:
             l.error(f"Failed to reload config: {e}")
             await self._reply_reload(

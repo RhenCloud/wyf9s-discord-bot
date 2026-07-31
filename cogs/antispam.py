@@ -204,8 +204,10 @@ class AntiSpamCog(commands.Cog):
         except discord.Forbidden as e:
             action_type, perm_name = self._action_permission(action)
             me = guild.me
-            has_perm = bool(getattr(me.guild_permissions, perm_name, False))
-            if has_perm:
+            has_perm = False
+            if me is not None:
+                has_perm = bool(getattr(me.guild_permissions, perm_name, False))
+            if me is not None and has_perm:
                 reason = (
                     f"Bot has {perm_name} but target's top role "
                     f"({target.top_role.name}) is higher or equal to bot's "

@@ -167,11 +167,12 @@ _args = parse_args()
 u.set_data_dir(_args.data_dir)
 
 # init config
-c = Config(
+_cfg = Config(
     config_path=_args.config,
     token_file=_args.token_file,
     token=_args.token,
-).config
+)
+c = _cfg.config
 
 # reconfigure loggers now that we have config
 l.remove()
@@ -224,6 +225,7 @@ client = commands.Bot(command_prefix=c.command_prefix, intents=intents, proxy=c.
 
 # Store config and shared state on bot instance
 client.config = c  # ty:ignore[unresolved-attribute]
+client._config_instance = _cfg  # ty:ignore[unresolved-attribute]
 
 client.lang_store = LangStore()  # ty:ignore[unresolved-attribute]
 

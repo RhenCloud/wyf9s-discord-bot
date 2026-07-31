@@ -269,7 +269,6 @@ perm:
   removed_count: ":white_check_mark: **已删除 {count} 条规则**:"
   no_rules: ":information_source: **未找到权限规则**"
   show_title: "权限规则"
-  show_header: "权限规则 (范围: `{scope}`, {count} 条)"
   show_builtin_header: "服务器管理员 (范围: {scope}, {count} 条)"
   show_builtin_owner: ":crown: 服务器拥有者: <@{id}> (`{id}`)"
   show_builtin_admin_role: ":shield: 管理员身份组: {role}"

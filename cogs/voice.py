@@ -13,9 +13,12 @@ from i18n import t as _t
 from modules.audit import AuditLogger
 
 
-def _read_json(path: str, default: object = None) -> dict:
-    with open(path, "r", encoding="utf-8") as f:
-        return json.load(f)
+def _read_json(path: str, default: dict | None = None) -> dict:
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return default if default is not None else {}
 
 
 def _write_json(path: str, data: dict) -> None:

@@ -63,11 +63,11 @@ class _LoggingConfigModel(BaseModel):
         if v is None:
             return v
         if not isinstance(v, str):
-            raise TypeError(f"Invaild log level: {v}")
+            raise TypeError(f"Invalid log level: {v}")
         upper = v.strip().upper()
         valid = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
         if upper not in valid:
-            raise ValueError(f"Invaild log level: {v}")
+            raise ValueError(f"Invalid log level: {v}")
         return upper
 
 
@@ -509,6 +509,10 @@ class Config:
         """
         perf = u.perf_counter()
 
+        self._config_path = config_path
+        self._token_file = token_file
+        self._token = token
+
         # resolve config path: 自定义路径按当前工作目录解析, 默认路径优先查找数据目录再回退到主程序目录
         if config_path:
             resolved_config = str(Path(config_path).expanduser())
@@ -524,6 +528,7 @@ class Config:
             sys.exit(1)
         except Exception as e:
             l.error(f"Error when loading {resolved_config}: {e}")
+            sys.exit(1)
 
         # load token from token file if it exists (for config splitting)
         # 自定义 token 文件路径按当前工作目录解析, 默认优先查找数据目录再回退到主程序目录
