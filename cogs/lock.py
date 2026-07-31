@@ -96,7 +96,7 @@ _WEEKDAY_MAP = {
 
 def _parse_day(value: str, ref_year: int | None = None) -> tuple[int, int, int]:
     value = value.strip()
-    now = datetime.now()
+    now = datetime.now(tz=timezone.utc)
     year = ref_year or now.year
     m = re.fullmatch(r"(\d{4})-(\d{1,2})-(\d{1,2})", value)
     if m:
@@ -128,7 +128,7 @@ def _parse_day_time(
     if not time_str:
         time_str = "00-00"
     if not day_str:
-        now = datetime.now()
+        now = datetime.now(tz=timezone.utc)
         day_str = f"{now.year}-{now.month}-{now.day}"
     y, mo, d = _parse_day(day_str)
     h, mi = _parse_time(time_str)
@@ -573,7 +573,7 @@ class LockCog(commands.Cog):
     @tasks.loop(minutes=1)
     async def _check_schedules(self):
         now = datetime.now(timezone.utc)
-        now_local = datetime.now()
+        now_local = datetime.now(tz=timezone.utc)
         to_remove: list[int] = []
 
         for idx, schedule in enumerate(self.store.schedules):
@@ -596,14 +596,14 @@ class LockCog(commands.Cog):
                 if schedule.cycle_start:
                     try:
                         cy, cm, cd = _parse_day(schedule.cycle_start)
-                        if now_local.date() < datetime(cy, cm, cd).date():
+                        if now_local.date() < datetime(cy, cm, cd).date():  # noqa: DTZ001  # date-only comparison is intentional
                             continue
                     except ValueError:
                         pass
                 if schedule.cycle_end:
                     try:
                         cy, cm, cd = _parse_day(schedule.cycle_end)
-                        if now_local.date() > datetime(cy, cm, cd).date():
+                        if now_local.date() > datetime(cy, cm, cd).date():  # noqa: DTZ001  # date-only comparison is intentional
                             to_remove.append(idx)
                             continue
                     except ValueError:
@@ -683,14 +683,13 @@ class LockCog(commands.Cog):
                     except Exception as e:
                         l.error(f"[lock] Unlock failed {channel.id}: {e}")
 
-            if not schedule.cycle:
-                if (
-                    not schedule.lock_day
-                    and not schedule.lock_time
-                    and not schedule.unlock_day
-                    and not schedule.unlock_time
-                ):
-                    to_remove.append(idx)
+            if not schedule.cycle and (
+                not schedule.lock_day
+                and not schedule.lock_time
+                and not schedule.unlock_day
+                and not schedule.unlock_time
+            ):
+                to_remove.append(idx)
 
         for idx in sorted(set(to_remove), reverse=True):
             self.store.remove_by_index(idx)

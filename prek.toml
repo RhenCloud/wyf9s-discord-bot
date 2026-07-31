@@ -2,24 +2,31 @@
 # Run manually with: uvx prek run --all-files
 # Install the git hook with: uvx prek install
 
-# Ruff — official pre-commit hooks (lint + format)
-[[repos]]
-repo = "https://github.com/astral-sh/ruff-pre-commit"
-rev = "v0.15.21"
-hooks = [
-  { id = "ruff-check", args = ["--fix"] },
-  { id = "ruff-format" },
-]
-
-# Local hooks (ty type check)
+# Local hooks — run ruff & ty directly via uvx (no upstream pre-commit repo)
 [[repos]]
 repo = "local"
+
+[[repos.hooks]]
+id = "ruff-check"
+name = "ruff check --fix"
+language = "system"
+entry = "uvx ruff check --fix"
+pass_filenames = false
+files = "\\.py$"
 
 [[repos.hooks]]
 id = "ty"
 name = "ty check"
 language = "system"
-entry = "uvx ty check"
+entry = "uvx ty check --fix"
+pass_filenames = false
+files = "\\.py$"
+
+[[repos.hooks]]
+id = "ruff-format"
+name = "ruff format"
+language = "system"
+entry = "uvx ruff format"
 pass_filenames = false
 files = "\\.py$"
 

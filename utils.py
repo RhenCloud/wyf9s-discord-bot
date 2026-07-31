@@ -114,12 +114,19 @@ async def get_json(url: str, **params) -> tuple[bool, dict, str]:
     :return str: error
     """
     try:
-        async with aiohttp.ClientSession() as sess:
-            async with sess.get(url, **params) as resp:
-                if resp.status == 200:
-                    return True, await resp.json(), ""
-                else:
-                    raise Exception(f"Status code isn't 200: {resp.status}")
+        async with (
+            aiohttp.ClientSession() as sess,
+            sess.get(url, **params) as resp,
+        ):
+            if resp.status == 200:
+                return True, await resp.json(), ""
+            else:
+                raise aiohttp.ClientResponseError(
+                    request_info=resp.request_info,
+                    history=resp.history,
+                    status=resp.status,
+                    message=f"Status code isn't 200: {resp.status}",
+                )
     except Exception as e:
         l.warning(f"[get_json] Request {url} error: {e}")
         return False, {}, str(e)
@@ -238,11 +245,10 @@ def is_mod(
             if matches_identity(user, guild_users):
                 return True
     # 动态 mod 授权: perm.yaml 中 module/command 均为空的规则
-    if _perm_store is not None and _perm_store.grants_mod(
-        user.id, guild.id if guild is not None else None
-    ):
-        return True
-    return False
+    return bool(
+        _perm_store is not None
+        and _perm_store.grants_mod(user.id, guild.id if guild is not None else None)
+    )
 
 
 # ========== Declarative Permission Control ==========

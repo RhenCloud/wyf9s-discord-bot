@@ -63,7 +63,6 @@ class LangStore:
     def resolve(self, user_id: int | str, guild_id: int | None = None) -> LangCode:
         if lang := self._user_lang.get(str(user_id)):
             return lang
-        if guild_id is not None:
-            if lang := self._guild_lang.get(guild_id):
-                return lang
+        if guild_id is not None and (lang := self._guild_lang.get(guild_id)):
+            return lang
         return "zh"

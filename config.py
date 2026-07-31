@@ -1,3 +1,4 @@
+import sys
 import typing as t
 from pathlib import Path
 
@@ -29,7 +30,7 @@ class _LoggingConfigModel(BaseModel):
     - 设置为 None 以禁用
     """
 
-    file_level: t.Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL", None] = (
+    file_level: t.Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] | None = (
         "INFO"
     )
     """
@@ -62,7 +63,7 @@ class _LoggingConfigModel(BaseModel):
         if v is None:
             return v
         if not isinstance(v, str):
-            raise ValueError(f"Invaild log level: {v}")
+            raise TypeError(f"Invaild log level: {v}")
         upper = v.strip().upper()
         valid = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
         if upper not in valid:
@@ -364,13 +365,13 @@ class _SpamCatcherRuleConfigModel(BaseModel):
         if v in (None, False):
             return None
         if isinstance(v, bool):
-            raise ValueError("clear_message must be int or null/false")
+            raise TypeError("clear_message must be int or null/false")
         return v
 
     @field_validator("hacked", mode="before")
     def normalize_hacked(cls, v):
         if isinstance(v, bool):
-            raise ValueError("hacked must be kick/ban/mute or minutes")
+            raise TypeError("hacked must be kick/ban/mute or minutes")
         return v
 
 
@@ -520,7 +521,7 @@ class Config:
                 raw_config: dict = safe_load(f)
         except FileNotFoundError:
             l.error(f"Config file {resolved_config} not found!")
-            exit(1)
+            sys.exit(1)
         except Exception as e:
             l.error(f"Error when loading {resolved_config}: {e}")
 
@@ -545,7 +546,7 @@ class Config:
                 l.warning(f"[config] Failed to load {tk_path}: {e}")
         elif tk_required:
             l.error(f"Token file {tk_path} not found!")
-            exit(1)
+            sys.exit(1)
 
         # 直接指定的 token 优先级最高, 覆盖配置文件和 token 文件
         # (来自 --token 参数或 W9DCBOT_TOKEN 环境变量)

@@ -303,8 +303,8 @@ async def on_tree_error(
                 success=False,
                 auto=False,
             )
-        except Exception:
-            pass
+        except Exception as e:
+            l.debug(f"[main] Failed to log slash error to audit: {e}")
 
 
 # endregion error-handling
@@ -361,7 +361,7 @@ async def on_ready():
 
         persist_path = u.get_data_path("voice.yaml")
         if os.path.exists(persist_path):
-            with open(persist_path, "r", encoding="utf-8") as f:
+            with open(persist_path, "r", encoding="utf-8") as f:  # noqa: ASYNC230  # startup restore, event loop idle
                 persisted = json.load(f)
             for gid_str, ch_id in persisted.items():
                 guild = client.get_guild(int(gid_str))

@@ -1,7 +1,7 @@
 import io
 import random
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import uuid4 as uuid
 
 import discord
@@ -446,7 +446,7 @@ class ToolsCog(commands.Cog):
     async def _handle_uuid(self, source, delete_after: int):
         if not await self._check_rate_limit(source, "uuid"):
             return
-        now = int(datetime.now().timestamp())
+        now = int(datetime.now(tz=timezone.utc).timestamp())
         await u.send_msg(
             source,
             self._tr(
@@ -587,17 +587,20 @@ class ToolsCog(commands.Cog):
             return
 
         # Safety: non-admin mods must have manage_channels on the target channel
-        if not u.is_admin(user, self.c) and not u.is_server_admin(user):
-            if isinstance(user, discord.Member):
-                perms = channel.permissions_for(user)
-                if not perms.manage_channels:
-                    await u.send_msg(
-                        source,
-                        self._tr(source, "tools.move_no_manage_channels"),
-                        ephemeral=True,
-                        delete_after=10,
-                    )
-                    return
+        if (
+            not u.is_admin(user, self.c)
+            and not u.is_server_admin(user)
+            and isinstance(user, discord.Member)
+        ):
+            perms = channel.permissions_for(user)
+            if not perms.manage_channels:
+                await u.send_msg(
+                    source,
+                    self._tr(source, "tools.move_no_manage_channels"),
+                    ephemeral=True,
+                    delete_after=10,
+                )
+                return
 
         kwargs = {}
         update_category = False

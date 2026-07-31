@@ -1,4 +1,5 @@
 import asyncio
+import functools
 import json
 
 import discord
@@ -10,6 +11,16 @@ import utils as u
 from i18n import lang_of, ls
 from i18n import t as _t
 from modules.audit import AuditLogger
+
+
+def _read_json(path: str, default: object = None) -> dict:
+    with open(path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def _write_json(path: str, data: dict) -> None:
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
 
 
 def _voice_permission(
@@ -144,13 +155,15 @@ class VoiceCog(commands.Cog):
                 try:
                     data_path = u.get_data_path("voice.yaml")
                     try:
-                        with open(data_path, "r", encoding="utf-8") as f:
-                            persisted = json.load(f)
+                        persisted = await asyncio.to_thread(
+                            functools.partial(_read_json, data_path, default={})
+                        )
                     except Exception:
                         persisted = {}
                     persisted[str(guild.id)] = channel.id
-                    with open(data_path, "w", encoding="utf-8") as f:
-                        json.dump(persisted, f, ensure_ascii=False, indent=2)
+                    await asyncio.to_thread(
+                        functools.partial(_write_json, data_path, persisted)
+                    )
                     l.info(
                         f"[voice] Persisted voice for guild {guild.id} -> channel {channel.id}"
                     )
@@ -224,11 +237,13 @@ class VoiceCog(commands.Cog):
         # Clean up persisted voice state if present
         try:
             data_path = u.get_data_path("voice.yaml")
-            with open(data_path, "r", encoding="utf-8") as f:
-                persisted = json.load(f)
+            persisted = await asyncio.to_thread(
+                functools.partial(_read_json, data_path, default={})
+            )
             persisted.pop(str(guild.id), None)
-            with open(data_path, "w", encoding="utf-8") as f:
-                json.dump(persisted, f, ensure_ascii=False, indent=2)
+            await asyncio.to_thread(
+                functools.partial(_write_json, data_path, persisted)
+            )
         except Exception as e:
             l.warning(f"[voice] Failed to clean persisted voice entry: {e}")
         if self.audit:
@@ -278,15 +293,15 @@ class VoiceCog(commands.Cog):
                         delay = min(delay * 2, max_delay)
                         continue
 
-                    if guild.voice_client:
-                        if (
-                            isinstance(guild.voice_client.channel, discord.VoiceChannel)
-                            and guild.voice_client.channel.id == channel_id
-                        ):
-                            l.info(
-                                f"[voice] Already reconnected to {channel.name} in guild {guild.id}"
-                            )
-                            break
+                    if (
+                        guild.voice_client
+                        and isinstance(guild.voice_client.channel, discord.VoiceChannel)
+                        and guild.voice_client.channel.id == channel_id
+                    ):
+                        l.info(
+                            f"[voice] Already reconnected to {channel.name} in guild {guild.id}"
+                        )
+                        break
 
                     await channel.connect(self_deaf=True, self_mute=True)
                     l.info(
@@ -300,8 +315,8 @@ class VoiceCog(commands.Cog):
                                 guild, "voice.reconnected", channel=channel.name
                             )
                         )
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        l.debug(f"[voice] Failed to send reconnected notice: {e}")
 
                     if notify_admin:
                         try:
@@ -313,8 +328,10 @@ class VoiceCog(commands.Cog):
                                     prefix=prefix,
                                 )
                             )
-                        except Exception:
-                            pass
+                        except Exception as e:
+                            l.debug(
+                                f"[voice] Failed to send admin disconnect notice: {e}"
+                            )
 
                     if self.audit:
                         try:
@@ -325,8 +342,10 @@ class VoiceCog(commands.Cog):
                                 guild=guild,
                                 detail=f"Reconnected to voice `{channel.name}` (`{channel_id}`)",
                             )
-                        except Exception:
-                            pass
+                        except Exception as e:
+                            l.debug(
+                                f"[voice] Failed to log voice reconnect to audit: {e}"
+                            )
                     return
 
                 except discord.ClientException as e:
@@ -365,7 +384,9 @@ class VoiceCog(commands.Cog):
     def _is_persisted(guild_id: int) -> bool:
         try:
             data_path = u.get_data_path("voice.yaml")
-            with open(data_path, "r", encoding="utf-8") as f:
+            with open(
+                data_path, "r", encoding="utf-8"
+            ) as f:  # startup read, event loop idle
                 persisted = json.load(f)
             return str(guild_id) in persisted
         except Exception:

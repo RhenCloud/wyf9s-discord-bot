@@ -143,7 +143,10 @@ voicechannel:
   enabled: false
   slash: true
   prefix: true
-  allowed_user_ids: []
+  allowed_users: []
+  allowed_guilds: {}
+  reconnect: true
+  reconnect_max_delay: 300
 
 # 反垃圾消息模块 (无指令, 基于事件)
 antispam:

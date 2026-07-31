@@ -2,21 +2,31 @@
 
 ## Code Quality
 
-After making changes, always run:
+After making changes, always run (in this order):
 
 ```bash
-uvx ruff check --fix && uvx ruff format && uvx ty check --fix
+uvx ruff check --fix && uvx ty check --fix && uvx ruff format
 ```
 
-- `ruff check --fix` - lint and auto-fix
-- `ruff format` - format code
-- `ty check --fix` - type check and auto-fix
+- `ruff check --fix` — lint and auto-fix
+- `ty check --fix` — type check and auto-fix
+- `ruff format` — format code (**must** run after `ruff check` and `ty check` so that
+  their fixes are formatted consistently)
 
-Fix any remaining errors before committing.
+**Commit requirements:**
+
+- **All ruff errors/warnings, ty errors/warnings, and other hints must be resolved
+  before committing.** Do not leave any unaddressed diagnostics.
+- **Do NOT use `# noqa` or `type: ignore` to suppress issues on an entire file or
+  line unless absolutely necessary and reasonable.** When suppression is justified,
+  add the specific rule id to `pyproject.toml`'s `lint.ignore` list and include a
+  comment naming the rule (e.g. `# noqa: E402  # module-import-not-at-top-of-file`).
+  The existing project-level ignores in `pyproject.toml` already follow this
+  convention — always check them before adding new suppressions.
 
 ### prek (pre-commit)
 
-The repo ships a [`prek`](https://prek.j178.dev) config (`prek.toml`, prek-native TOML — not the `.pre-commit-config.yaml` compat format). It runs ruff (official pre‑commit hooks) and `ty check`.
+The repo ships a [`prek`](https://prek.j178.dev) config (`prek.toml`, prek-native TOML — not the `.pre-commit-config.yaml` compat format). It runs `ruff check --fix`, `ty check --fix`, and `ruff format` as local hooks (ruff format runs last).
 
 - Install the git hook once per clone: `uvx prek install`
 - Run on demand: `uvx prek run --all-files`

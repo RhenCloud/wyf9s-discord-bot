@@ -20,4 +20,7 @@ dependencies = [
 ]
 
 [tool.ruff]
-lint.ignore = ["E402", "BLE001"]
+lint.ignore = [
+    "E402",  # module-import-not-at-top-of-file
+    "BLE001",  # blind-except
+]

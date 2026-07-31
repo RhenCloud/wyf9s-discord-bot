@@ -18,11 +18,7 @@ def _perm_permission(
     user: discord.User | discord.Member,
     guild: discord.Guild | None,
 ) -> bool:
-    if u.is_admin(user, module.c):
-        return True
-    if u.is_server_admin(user):
-        return True
-    return False
+    return u.is_admin(user, module.c) or u.is_server_admin(user)
 
 
 def _perm_show_permission(

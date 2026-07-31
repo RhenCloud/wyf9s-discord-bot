@@ -126,19 +126,21 @@ class EmojiCog(commands.Cog):
         await interaction.response.defer()
 
         try:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(imgurl, proxy=self.c.proxy) as resp:
-                    img = await resp.read()
-                    with io.BytesIO(img) as file:
-                        await interaction.followup.send(
-                            file=discord.File(
-                                fp=file,
-                                filename=name,
-                                description=self._tr(
-                                    interaction, "emoji.sticker_desc", name=name
-                                ),
-                            )
+            async with (
+                aiohttp.ClientSession() as session,
+                session.get(imgurl, proxy=self.c.proxy) as resp,
+            ):
+                img = await resp.read()
+                with io.BytesIO(img) as file:
+                    await interaction.followup.send(
+                        file=discord.File(
+                            fp=file,
+                            filename=name,
+                            description=self._tr(
+                                interaction, "emoji.sticker_desc", name=name
+                            ),
                         )
+                    )
         except Exception as err:
             await interaction.followup.send(
                 self._tr(
@@ -191,19 +193,19 @@ class EmojiCog(commands.Cog):
         await ctx.defer()
 
         try:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(imgurl, proxy=self.c.proxy) as resp:
-                    img = await resp.read()
-                    with io.BytesIO(img) as file:
-                        await ctx.send(
-                            file=discord.File(
-                                fp=file,
-                                filename=name,
-                                description=self._tr(
-                                    ctx, "emoji.sticker_desc", name=name
-                                ),
-                            )
+            async with (
+                aiohttp.ClientSession() as session,
+                session.get(imgurl, proxy=self.c.proxy) as resp,
+            ):
+                img = await resp.read()
+                with io.BytesIO(img) as file:
+                    await ctx.send(
+                        file=discord.File(
+                            fp=file,
+                            filename=name,
+                            description=self._tr(ctx, "emoji.sticker_desc", name=name),
                         )
+                    )
         except Exception as err:
             await ctx.send(
                 self._tr(ctx, "emoji.fetch_error", name=name, url=imgurl, error=err),

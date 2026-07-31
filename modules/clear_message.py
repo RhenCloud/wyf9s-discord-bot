@@ -411,9 +411,9 @@ class ClearMessageService:
                 display_name = getattr(msg.author, "display_name", msg.author.name)
                 if fnmatch(display_name, nick_pattern_filter):
                     return True
-            if content_pattern_filter and fnmatch(msg.content, content_pattern_filter):
-                return True
-            return False
+            return bool(
+                content_pattern_filter and fnmatch(msg.content, content_pattern_filter)
+            )
 
         history_kwargs: dict = {}
         if has_time_range:
@@ -502,15 +502,11 @@ class ClearMessageService:
                 ca = _thread_created(th)
                 if tcs is not None and ca < tcs:
                     return False
-                if tce is not None and ca > tce:
-                    return False
-                return True
+                return not (tce is not None and ca > tce)
             la = _thread_last_activity(th)
             if lo is not None and la < lo:
                 return False
-            if hi is not None and _thread_created(th) > hi:
-                return False
-            return True
+            return not (hi is not None and _thread_created(th) > hi)
 
         def thread_matches(th: discord.Thread) -> bool:
             if not match_types:
@@ -522,11 +518,10 @@ class ClearMessageService:
                 owner_name = getattr(owner, "display_name", None) if owner else None
                 if owner_name and fnmatch(owner_name, nick_pattern_filter):
                     return True
-            if content_pattern_filter and fnmatch(
-                th.name or "", content_pattern_filter
-            ):
-                return True
-            return False
+            return bool(
+                content_pattern_filter
+                and fnmatch(th.name or "", content_pattern_filter)
+            )
 
         async def process_thread(th: discord.Thread) -> None:
             nonlocal checked_count
