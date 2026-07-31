@@ -197,7 +197,7 @@ docker run -d --name wyf9s-discord-bot --restart unless-stopped \
   -v "$(pwd)/config.yaml:/app/data/config.yaml:ro" \
   -v "$(pwd)/tk.yaml:/app/data/tk.yaml:ro" \
   -v "$(pwd)/data:/app/data" \
-  ghcr.io/rhencloud/wyf9s-discord-bot:latest
+  ghcr.io/wyf9/wyf9s-discord-bot:latest
 ```
 
 配置文件 / token 文件与运行时数据（`perm.yaml`、`lang_settings.yaml`、`schedules.yaml`、日志）均持久化在宿主机目录，路径解析规则同[数据目录](#数据目录)。也可用 `W9DCBOT_TOKEN` 环境变量直接注入 token（优先级最高）。

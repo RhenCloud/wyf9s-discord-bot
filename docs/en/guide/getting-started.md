@@ -209,7 +209,7 @@ docker run -d --name wyf9s-discord-bot --restart unless-stopped \
   -v "$(pwd)/config.yaml:/app/data/config.yaml:ro" \
   -v "$(pwd)/tk.yaml:/app/data/tk.yaml:ro" \
   -v "$(pwd)/data:/app/data" \
-  ghcr.io/rhencloud/wyf9s-discord-bot:latest
+  ghcr.io/wyf9/wyf9s-discord-bot:latest
 ```
 
 The config file / token file and runtime data (`perm.yaml`, `lang_settings.yaml`, `schedules.yaml`, logs) are all persisted in host directories, following the same resolution rules as the [Data Directory](#data-directory). You can also inject the token directly via the `W9DCBOT_TOKEN` environment variable (highest priority).
